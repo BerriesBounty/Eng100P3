@@ -98,4 +98,3 @@ signal_connect(rest_button_clicked, rbutton, "clicked")
 win = GtkWindow("gtk3", 400, 300) # 400×300 pixel window for all the buttons
 push!(win, g) # put button grid into the window
 showall(win); # display the window full of buttons
-ddd

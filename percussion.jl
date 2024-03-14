@@ -66,23 +66,5 @@ for i in 1:4
 end
 soundsc(arand, sample_rate)
 
-using PortAudio: PortAudioStream, write
 
-stream = PortAudioStream(0, 1; warn_xruns=false)
-
-function play_tone(stream, freq::Real, duration::Real; buf_size::Int = 1024)
-    S = stream.sample_rate
-    current = 1
-    while current < duration*S
-        x = 0.7 * sin.(2π * (current .+ (1:buf_size)) * freq / S)
-        if(current > duration*S*0.5)
-          x = arand
-        end
-        write(stream, x)
-        current += buf_size
-    end
-    nothing
-end
-
-play_tone(stream, 440, 2)
 

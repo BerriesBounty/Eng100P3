@@ -7,6 +7,8 @@ using PortAudio: PortAudioStream, write
 
 stream = PortAudioStream(0, 1; warn_xruns=false)
 
+
+
 function play_tone(stream, freq::Real, duration::Real; buf_size::Int = 1024)
     S = stream.sample_rate
     current = 1
@@ -18,7 +20,7 @@ function play_tone(stream, freq::Real, duration::Real; buf_size::Int = 1024)
         write(stream, x)
         current += buf_size
     end
-    nothing
+    nothin
 end
 
 play_tone(stream, 440, 2)

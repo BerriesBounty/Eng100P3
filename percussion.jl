@@ -151,5 +151,5 @@ soundsc(loop, sample_rate)
 wavwrite(loop, "touch.wav", Fs=sample_rate)
 
 x, S = wavread("touch.wav")
-soundsc(x, sample_rate)
+plot(x)
 

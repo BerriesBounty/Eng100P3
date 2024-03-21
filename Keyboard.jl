@@ -18,6 +18,7 @@ end
 white = ["G" 67; "A" 69; "B" 71; "C" 72; "D" 74; "E" 76; "F" 77; "G" 79 ]
 black = ["G" 68 2; "A" 70 4; "C" 73 8; "D" 75 10; "F" 78 14]
 
+grid = GtkGrid()
 g = GtkGrid() # initialize a grid to hold buttons
 set_gtk_property!(g, :row_spacing, 5) # gaps between buttons
 set_gtk_property!(g, :column_spacing, 5)
@@ -96,5 +97,6 @@ set_gtk_property!(rbutton, :name, "wb") # set "style" of rest key
 signal_connect(rest_button_clicked, rbutton, "clicked")
 
 win = GtkWindow("gtk3", 400, 300) # 400×300 pixel window for all the buttons
-push!(win, g) # put button grid into the window
+grid[2,1] = g
+push!(win, grid) # put button grid into the window
 showall(win); # display the window full of buttons

@@ -5,12 +5,14 @@ and routing it to the default audio output device using `write()`.
 
 using PortAudio: PortAudioStream, write
 using Gtk
-include("percussion.jl")
+using Plots;
+using Sound: soundsc
+#include("percussion.jl")
 const start_times = Dict{UInt32, UInt32}()
 
 playNote = false;
 index = 1;
-freql = [440, 480, 520, 560]
+freql = [523.25, 554.37, 587.33, 622.25, 659.26, 698.46, 739.99, 783.99, 830.61, 880, 932.33, 987.77]
 
 w = GtkWindow("Key Press/Release Example")
 
@@ -20,7 +22,7 @@ id1 = signal_connect(w, "key-press-event") do widget, event
         start_times[k] = event.time # save the initial key press time
         println("You pressed key ", k, " which is '", Char(k), "'.")
         global playNote = true;
-        global  index = k%4 + 1
+        global  index = k%length(freql) + 1
     else
         println(playNote)
     end
@@ -37,28 +39,29 @@ end
 stream = PortAudioStream(0, 1; warn_xruns=false)
 
 
+song = zeros(round(Int, 20 * stream.sample_rate))
 
 function play_tone(stream, freq::Real, duration::Real; buf_size::Int = 1024)
     S = stream.sample_rate
     current = 1
     
     while current < duration*S
-        println(playNote)
-        amplitude = 0.0001
+        amplitude = 0
         freq1 = freql[index];
         if(playNote)
           amplitude = 0.7
         end
         x = amplitude * sin.(2π * (current .+ (1:buf_size)) * freq1*2 / S)
+        global song[current:current+buf_size-1] = x;
         write(stream, x)
         current += buf_size
     end
     nothin
 end
 
-#play_tone(stream, 440, 20)
-
-PortAudioStream(0, 1; 44100) do stream
-    write(stream, bassDrum())
-  end
+play_tone(stream, 440, 10)
+soundsc(song, stream.sample_rate)
+# PortAudioStream(0, 1; 44100) do stream
+#     write(stream, bassDrum())
+#   end
 

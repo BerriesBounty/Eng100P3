@@ -91,67 +91,86 @@ iamp = 100000
 k1 = expon_func(120, 50, 0.2, sample_rate)
 k2 = expon_func(500, 200, 0.4, sample_rate)
 bass_drum = oscil_func(iamp, sine_wave_interp, 0.25, sample_rate)
+
+# Function to generate and normalize a bass drum sound
+function generate_and_normalize_bass_drum(sample_rate, duration, start_freq, end_freq)
+  # Time vector
+  t = collect(0:1/sample_rate:(duration - 1/sample_rate))
+
+  # Exponential decay in frequency to simulate pitch drop
+  freq_decay = exp.(log.(end_freq / start_freq) .* t / duration) .* start_freq
+
+  # Amplitude envelope to simulate the strike decay
+  amp_decay = exp.(-15 * t)
+
+  # Generate the tone with varying frequency
+  signal = sin.(2 * π * freq_decay .* t) .* amp_decay
+
+  # Optionally, apply a low-pass filter to smooth the sound
+  lpf = digitalfilter(Lowpass(100; fs=sample_rate), Butterworth(2))
+  filtered_signal = filt(lpf, signal)
+
+  # Normalize the signal to ensure it's between -1 and 1
+  max_amp = maximum(abs.(filtered_signal))
+  normalized_signal = filtered_signal / max_amp
+
+  return normalized_signal
+end
+
+# Parameters for the bass drum sound
+sample_rate = 44100  # Sample rate in Hz
+duration = 0.25      # Duration of the sound in seconds
+start_freq = 150     # Starting frequency in Hz
+end_freq = 60        # Ending frequency in Hz, to simulate the pitch drop
+
+# Generate and normalize the bass drum sound
+bass_drum_sound = generate_and_normalize_bass_drum(sample_rate, duration, start_freq, end_freq)
+
+# Save the bass drum sound to a WAV file
+wavwrite(bass_drum_sound, "bass_drum_normalized.wav", Fs=sample_rate)
+
+# If you want to play the sound directly (ensure your environment supports it)
+# soundsc(bass_drum_sound, sample_rate)
 #BASS DRUM SIGNAL
 
 
-kcutfreq = expon.(10000, 2500, .1, t)
-t = 0:1/sample_rate:duration
-amp = expon.(10000, 20, 0.1, t)
 
-seed!(0)
-hihat = []
-for i in 1:(4410)
-  global hihat = [hihat; ((rand()*2 - 1) * amp[i])]
+# Function to generate a hi-hat sound
+function generate_hi_hat(sample_rate, duration)
+  # Create time vector
+  t = 0:1/sample_rate:duration
+  
+  # Generate white noise
+  noise = randn(Float64, length(t))
+  
+  # Create an amplitude envelope with exponential decay
+  envelope = exp.(-15 * t)
+  
+  # Apply the envelope to the white noise
+  hi_hat_sound = noise .* envelope
+  
+  # Optionally, apply a high-pass filter to give a brighter cymbal sound
+  hpf = digitalfilter(Highpass(10000; fs=sample_rate), Butterworth(4))
+  filtered_hi_hat_sound = filt(hpf, hi_hat_sound)
+  
+  return filtered_hi_hat_sound
 end
-#HIHAT SIGNAL
 
-function envelope(x; w::Int = 201) # uses moving average
-  h = (w-1) ÷ 2 # sliding window half-width (default 100)
-  x = abs.(x) # absolute value is crucial!
-  avg(v) = sum(v) / length(v) # function for (moving) average
-  return [avg(x[max(n-h,1):min(n+h,end)]) for n in 1:length(x)]
-end
+# Parameters for the hi-hat sound
+sample_rate = 44100  # Sample rate in Hz
+duration = 0.25      # Duration of the sound in seconds
 
-#filter the signals TODO
-responsetype = Lowpass(5; fs=50)
-designmethod = Butterworth(2)
-filt(digitalfilter(responsetype, designmethod), amp)
+# Generate the hi-hat sound
+hi_hat_sound = generate_hi_hat(sample_rate, duration)
 
-# for i in 1:4
-#   global arand = [arand; arand];
-# end
-# soundsc(arand, sample_rate)
-t = 0:1/sample_rate:0.25
-t = t[1:floor(Int, 0.25*sample_rate)]
-env = (1 .- exp.(-80*t)) .* exp.(-30*t)
-bass_drum = env .* bass_drum
+# Normalize the hi-hat sound to prevent clipping
+hi_hat_sound /= maximum(abs.(hi_hat_sound))
 
+# Save the hi-hat sound to a WAV file
+wavwrite(hi_hat_sound, "hi_hat.wav", Fs=sample_rate)
 
-ans = zeros(floor(Int, 0.25 * sample_rate))
-ans[1:4410] = hihat
-
-fullHihat = ans
-#ans .+= bass_drum
-
-result = [zeros(floor(Int, 2 * sample_rate))]
-
-buf = SampleBuf(ans, sample_rate)
-soundsc(ans, sample_rate)
-
-loop = zeros(2 * sample_rate)
-eigthNote = 11025
-for i in 1:8
-  loop[(i-1)*eigthNote+1:i*eigthNote] .+= fullHihat
-end
-for i in 1:2:8
-  loop[(i-1)*eigthNote+1:i*eigthNote] .+= bass_drum
-end
-soundsc(loop, sample_rate)
-
-wavwrite(loop, "touch.wav", Fs=sample_rate)
-
-x, S = wavread("touch.wav")
-plot(x)
+# If you want to play the sound directly (ensure your environment supports it)
+# soundsc(hi_hat_sound, sample_rate)
 
 
 
@@ -290,49 +309,13 @@ wavwrite(crash_cymbal_sound, "crash_cymbal.wav", Fs=sample_rate)
 # If you want to play the sound directly (ensure your environment supports it)
 # soundsc(crash_cymbal_sound, sample_rate)
 
-
-
-
-
-
-# Function to generate a ride cymbal sound
-function generate_ride_cymbal(sample_rate, duration)
-  # Generate white noise
+function generate_crash_cymbal(sample_rate, duration)
   noise = randn(Float64, round(Int, sample_rate * duration))
-  
-  # Create a series of band-pass filters to simulate the metallic tones of the ride cymbal
-  filters = [
-      digitalfilter(Bandpass(400, 600; fs=sample_rate), Butterworth(2)),
-      digitalfilter(Bandpass(800, 1200; fs=sample_rate), Butterworth(2)),
-      digitalfilter(Bandpass(2500, 3500; fs=sample_rate), Butterworth(2))
-  ]
-  
-  # Apply filters to the noise
-  filtered_noise = sum([filt(f, noise) for f in filters], dims=1)
-  
-  # Create an amplitude envelope for the ride cymbal sound
-  # This envelope simulates a slight attack and a longer sustain
   t = collect(0:1/sample_rate:(duration - 1/sample_rate))
-  envelope = exp.(-1 * t)  # A slower decay compared to crash cymbal
-  
-  # Apply the envelope to the filtered noise
-  ride_sound = filtered_noise .* envelope'
-  
-  return ride_sound
+  envelope = exp.(-5 * t)
+  crash_cymbal_sound = noise .* envelope
+  bpf = digitalfilter(Bandpass(2000, 8000; fs=sample_rate), Butterworth(4))
+  filtered_crash_sound = filt(bpf, crash_sound)
+  filtered_crash_sound /= maximum(abs.(filtered_crash_sound))  # Normalization
+  return filtered_crash_sound
 end
-
-# Parameters for the ride cymbal sound
-sample_rate = 44100  # Sample rate in Hz
-duration = 2.0       # Duration of the sound in seconds
-
-# Generate the ride cymbal sound
-ride_cymbal_sound = generate_ride_cymbal(sample_rate, duration)
-
-# Normalize the ride cymbal sound to prevent clipping
-ride_cymbal_sound /= maximum(abs.(ride_cymbal_sound))
-
-# Save the ride cymbal sound to a WAV file
-wavwrite(ride_cymbal_sound, "ride_cymbal.wav", Fs=sample_rate)
-
-# If you want to play the sound directly (ensure your environment supports it)
-# soundsc(ride_cymbal_sound, sample_rate)

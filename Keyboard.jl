@@ -1,7 +1,7 @@
 using Gtk
 using Sound: sound
 using MAT: matwrite
-
+#beats per minute: 120, sample/beat: 11025
 # initialize two global variables used throughout
 S = 7999 # sampling rate (samples/second) for this low-fi project
 song = Float32[] # initialize "song" as an empty vector

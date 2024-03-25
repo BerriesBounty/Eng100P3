@@ -92,10 +92,33 @@ k1 = expon_func(120, 50, 0.2, sample_rate)
 k2 = expon_func(500, 200, 0.4, sample_rate)
 bass_drum = oscil_func(iamp, sine_wave_interp, 0.25, sample_rate)
 
+t = 0:1/sample_rate:0.25
+t = t[1:floor(Int, 0.25*sample_rate)]
+env = (1 .- exp.(-80*t)) .* exp.(-30*t)
+bass_drum = env .* bass_drum
+bass_drum /= maximum(abs.(bass_drum))
+wavwrite(bass_drum, "bass_drum.wav", Fs=sample_rate)
+
+kcutfreq = expon.(10000, 2500, .1, t)
+t = 0:1/sample_rate:duration
+amp = expon.(10000, 20, 0.1, t)
+ 
+ seed!(0)
+hihat_short = []
+ for i in 1:(4410)
+  global hihat_short = [hihat_short; ((rand()*2 - 1) * amp[i])]
+end
+max_amp = maximum(abs.(hihat_short))
+hihat_short = hihat_short / max_amp
+hihat = zeros(floor(Int, 0.25 * sample_rate))
+hihat[1:4410] = hihat_short
+wavwrite(hihat, "hihat.wav", Fs=sample_rate)
+
+
 # Function to generate and normalize a bass drum sound
 function generate_and_normalize_bass_drum(sample_rate, duration, start_freq, end_freq)
   # Time vector
-  t = collect(0:1/sample_rate:(duration - 1/sample_rate))
+  t = 0:1/sample_rate:(duration - 1/sample_rate)
 
   # Exponential decay in frequency to simulate pitch drop
   freq_decay = exp.(log.(end_freq / start_freq) .* t / duration) .* start_freq
@@ -144,7 +167,7 @@ function generate_hi_hat(sample_rate, duration)
   noise = randn(Float64, length(t))
   
   # Create an amplitude envelope with exponential decay
-  envelope = exp.(-15 * t)
+  envelope = exp.(-50 * t)
   
   # Apply the envelope to the white noise
   hi_hat_sound = noise .* envelope
@@ -319,3 +342,24 @@ function generate_crash_cymbal(sample_rate, duration)
   filtered_crash_sound /= maximum(abs.(filtered_crash_sound))  # Normalization
   return filtered_crash_sound
 end
+
+hihat = hihat[1:11025]
+bass_drum_sound = bass_drum_sound[1:11025]
+snare_sound = snare_sound[1:11025]
+
+wavwrite(bass_drum_sound, "bass_drum_normalized.wav", Fs=sample_rate)
+
+loop = zeros(2 * sample_rate)
+eigthNote = 11025
+print(length(hi_hat_sound))
+for i in 1:8
+  loop[(i-1)*eigthNote+1:i*eigthNote] .+= hihat
+end
+for i in 1:2:8
+  loop[(i-1)*eigthNote+1:i*eigthNote] .+= bass_drum_sound
+end
+for i in 3:4:8
+  loop[(i-1)*eigthNote+1:i*eigthNote] .+= snare_sound
+end
+
+soundsc(loop, sample_rate)

@@ -1,5 +1,6 @@
 using Gtk
 using Sound: soundsc
+using WAV
 
 g = GtkGrid() # initialize a grid to hold buttons
 set_gtk_property!(g, :row_spacing, 5) # gaps between buttons
@@ -12,19 +13,24 @@ N = 11025
 freqs = [67; 69; 71; 73]
 song = zeros(4*S) * ones(4)'
 
-function miditone(midi::Int, idx::Int, note::Int, nsample::Int = N)
-    f = 440 * 2^((midi-69)/12) # compute frequency from midi number
-    x = cos.(2pi*(1:nsample)*f/S) # generate sinusoidal tone
+bass_drum, _ = wavread("bass_drum_normalized.wav")
+hi_hat, _ = wavread("hihat.wav")
+snare, _ = wavread("snare.wav")
+crash, _ = wavread("crash_cymbal.wav")
+percussion = [bass_drum, hi_hat, snare, crash]
+print(size(percussion))
+
+function miditone(idx::Int, note::Int, nsample::Int = N)
+    x = percussion[note]
     sound(x, S) # play note so that user can hear it immediately
-    global song[(idx-1)*N+1:idx*N, note] = x
+    global song[(idx-1)*N+1:(idx-1)*N+1+length(x), note] += x
     return nothing
 end
 
 for i in 1:16 # add the white keys to the grid
     for n in 1:4
-    midi = freqs[n]
     b = GtkButton() # make a button for this key
-    signal_connect((w) -> miditone(midi, i, n), b, "clicked")
+    signal_connect((w) -> miditone(i, n), b, "clicked")
     g[i, n] = b # put the button in row 2 of the grid
     end
 end

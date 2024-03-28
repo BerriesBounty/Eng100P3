@@ -12,7 +12,7 @@ set_gtk_property!(g, :column_homogeneous, true)
 S = 44100
 N = 11025
 freqs = [67; 69; 71; 73]
-song = zeros(4*S) * ones(4)'
+song = zeros(6*S) * ones(4)'
 
 stream = PortAudioStream(0, 1; warn_xruns=false)
 

@@ -36,8 +36,8 @@ end
 
 for i in 1:16 # add the white keys to the grid
     for n in 1:4
-    b = GtkButton() # make a button for this key
-    signal_connect((w) -> miditone(i, n), b, "clicked")
+        b = GtkButton() # make a button for this key
+        signal_connect((w) -> miditone(i, n), b, "clicked")
     g[i, n] = b # put the button in row 2 of the grid
     end
 end

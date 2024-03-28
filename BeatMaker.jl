@@ -21,23 +21,34 @@ hi_hat, _ = wavread("hihat.wav")
 snare, _ = wavread("snare.wav")
 crash, _ = wavread("crash_cymbal.wav")
 percussion = [bass_drum, hi_hat, snare, crash]
+colors = ("red", "blue", "green", "purple")
+onoff = Bool.(zeros(16) * ones(4)')
+
 print(size(percussion))
 
 function miditone(idx::Int, note::Int, nsample::Int = N)
     x = percussion[note]
     write(stream, x) # play note so that user can hear it immediately
-    global song[(idx-1)*N+1:(idx-1)*N+length(x), note] += x
-
-    b_green = GtkCssProvider(data="#gogreen {color:yellow; background:green;}")
-    push!(GAccessor.style_context(g[idx, note]), GtkStyleProvider(b_green), 600)
-    set_gtk_property!(g[idx, note], :name, "gogreen")
+    if onoff[idx, note] == 0
+        global song[(idx-1)*N+1:(idx-1)*N+length(x), note] += x
+        b_color = GtkCssProvider(data="#gocolor {background:" * colors[note] * ";}")
+        push!(GAccessor.style_context(g[idx, note]), GtkStyleProvider(b_color), 600)
+        set_gtk_property!(g[idx, note], :name, "gocolor")
+        onoff[idx,note] = 1
+    else
+        global song[(idx-1)*N+1:(idx-1)*N+length(x), note] -= x
+        b_color = GtkCssProvider(data="#gocolor {background:none;}")
+        push!(GAccessor.style_context(g[idx, note]), GtkStyleProvider(b_color), 600)
+        set_gtk_property!(g[idx, note], :name, "gocolor")
+        onoff[idx,note] = 0
+    end
 
 end
 
 for i in 1:16 # add the white keys to the grid
     for n in 1:4
-        b = GtkButton() # make a button for this key
-        signal_connect((w) -> miditone(i, n), b, "clicked")
+    b = GtkButton() # make a button for this key
+    signal_connect((w) -> miditone(i, n), b, "clicked")
     g[i, n] = b # put the button in row 2 of the grid
     end
 end

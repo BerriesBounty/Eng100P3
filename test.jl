@@ -7,7 +7,7 @@ using PortAudio: PortAudioStream, write
 using Gtk
 using Plots;
 using Sound: soundsc
-#include("percussion.jl")
+include("instruments.jl")
 const start_times = Dict{UInt32, UInt32}()
 
 playNote = false;
@@ -22,7 +22,7 @@ id1 = signal_connect(w, "key-press-event") do widget, event
         start_times[k] = event.time # save the initial key press time
         println("You pressed key ", k, " which is '", Char(k), "'.")
         global playNote = true;
-        global  index = k%length(freql) + 1
+        global index = k%length(freql) + 1
     else
         println(playNote)
     end
@@ -51,8 +51,8 @@ function play_tone(stream, freq::Real, duration::Real; buf_size::Int = 1024)
         if(playNote)
           amplitude = 0.7
         end
-        x = amplitude * sin.(2π * (current .+ (1:buf_size)) * freq1*2 / S)
-        global song[current:current+buf_size-1] = x;
+        x = amplitude * getNote(index, 1)
+        global song[current:current+buf_size-1] = x[1:buf_size];
         write(stream, x)
         current += buf_size
     end

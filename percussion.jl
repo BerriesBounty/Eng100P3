@@ -38,10 +38,7 @@ using PortAudio
 # amp = create_exponential_tone(10000, 10, 0.1, sample_rate)
 # sound(amp, sample_rate)
 #-------------experiments---------------------
-function bassDrum()
-  return bass_drum
-end
-
+stream = PortAudioStream(0, 1; warn_xruns=false)
 #create an exponential function 
 function expon(start_val, end_val, dur, t)
   return start_val * ((end_val / start_val) ^ (t / dur))
@@ -92,10 +89,35 @@ k1 = expon_func(120, 50, 0.2, sample_rate)
 k2 = expon_func(500, 200, 0.4, sample_rate)
 bass_drum = oscil_func(iamp, sine_wave_interp, 0.25, sample_rate)
 
+t = 0:1/sample_rate:0.25
+t = t[1:floor(Int, 0.25*sample_rate)]
+env = (1 .- exp.(-80*t)) .* exp.(-30*t)
+bass_drum = env .* bass_drum
+bass_drum /= maximum(abs.(bass_drum))
+wavwrite(bass_drum, "bass_drum.wav", Fs=sample_rate)
+
+kcutfreq = expon.(10000, 2500, .1, t)
+t = 0:1/sample_rate:duration
+amp = expon.(10000, 20, 0.1, t)
+ 
+seed!(0)
+hihat_short = []
+ for i in 1:(4410)
+  global hihat_short = [hihat_short; ((rand()*2 - 1) * amp[i])]
+end
+max_amp = maximum(abs.(hihat_short))
+hihat_short = hihat_short / max_amp
+hihat = zeros(floor(Int, 0.25 * sample_rate))
+hihat[1:4410] = hihat_short
+wavwrite(hihat, "hihat.wav", Fs=sample_rate)
+
+#------------------------------------------------------------------------------------------
+
+
 # Function to generate and normalize a bass drum sound
 function generate_and_normalize_bass_drum(sample_rate, duration, start_freq, end_freq)
   # Time vector
-  t = collect(0:1/sample_rate:(duration - 1/sample_rate))
+  t = 0:1/sample_rate:duration
 
   # Exponential decay in frequency to simulate pitch drop
   freq_decay = exp.(log.(end_freq / start_freq) .* t / duration) .* start_freq
@@ -117,11 +139,10 @@ function generate_and_normalize_bass_drum(sample_rate, duration, start_freq, end
   return normalized_signal
 end
 
-# Parameters for the bass drum sound
-sample_rate = 44100  # Sample rate in Hz
-duration = 0.25      # Duration of the sound in seconds
-start_freq = 150     # Starting frequency in Hz
-end_freq = 60        # Ending frequency in Hz, to simulate the pitch drop
+sample_rate = 44100
+duration = 0.25
+start_freq = 150
+end_freq = 60
 
 # Generate and normalize the bass drum sound
 bass_drum_sound = generate_and_normalize_bass_drum(sample_rate, duration, start_freq, end_freq)
@@ -144,7 +165,7 @@ function generate_hi_hat(sample_rate, duration)
   noise = randn(Float64, length(t))
   
   # Create an amplitude envelope with exponential decay
-  envelope = exp.(-15 * t)
+  envelope = exp.(-50 * t)
   
   # Apply the envelope to the white noise
   hi_hat_sound = noise .* envelope
@@ -155,10 +176,6 @@ function generate_hi_hat(sample_rate, duration)
   
   return filtered_hi_hat_sound
 end
-
-# Parameters for the hi-hat sound
-sample_rate = 44100  # Sample rate in Hz
-duration = 0.25      # Duration of the sound in seconds
 
 # Generate the hi-hat sound
 hi_hat_sound = generate_hi_hat(sample_rate, duration)
@@ -171,10 +188,6 @@ wavwrite(hi_hat_sound, "hi_hat.wav", Fs=sample_rate)
 
 # If you want to play the sound directly (ensure your environment supports it)
 # soundsc(hi_hat_sound, sample_rate)
-
-
-
-
 
 # snare code
 
@@ -211,9 +224,6 @@ function snareDrum(sample_rate=44100, duration=0.25)
   return snare_sound
 end
 
-# Example usage
-sample_rate = 44100
-duration = 0.25 # Snare sound duration in seconds
 snare_sound = snareDrum(sample_rate, duration)
 
 # Play the snare sound
@@ -226,14 +236,10 @@ wavwrite(snare_sound, "snare.wav", Fs=sample_rate)
 plot(snare_sound, title="Snare Drum Waveform", xlabel="Sample", ylabel="Amplitude")
 
 
-
-
-using DSP, WAV
-
 # Function to generate a tom drum sound
 function generate_tom_drum(sample_rate, duration, start_freq, end_freq)
     # Time vector
-    t = collect(0:1/sample_rate:(duration - 1/sample_rate))
+    t = 0:1/sample_rate:duration
     
     # Exponential decay in frequency to simulate pitch drop
     freq_decay = exp.(log.(end_freq / start_freq) .* t / duration) .* start_freq
@@ -251,9 +257,6 @@ function generate_tom_drum(sample_rate, duration, start_freq, end_freq)
     return filtered_signal
 end
 
-# Parameters for the tom drum sound
-sample_rate = 44100  # Sample rate in Hz
-duration = 0.25      # Duration of the sound in seconds, as requested
 start_freq = 200     # Starting frequency in Hz
 end_freq = 100       # Ending frequency in Hz, to simulate the pitch drop
 
@@ -270,17 +273,13 @@ wavwrite(tom_drum_sound, "tom_drum_short.wav", Fs=sample_rate)
 # soundsc(tom_drum_sound, sample_rate)
 
 
-
-
-
-
 # Function to generate a crash cymbal sound
 function generate_crash_cymbal(sample_rate, duration)
   # Correctly generate white noise with an integer size
   noise = randn(Float64, round(Int, sample_rate * duration))
   
   # Create an amplitude envelope for the crash cymbal sound
-  t = collect(0:1/sample_rate:(duration - 1/sample_rate))
+  t = 1/sample_rate:1/sample_rate:duration
   envelope = exp.(-5 * t)  # Modify the decay rate as needed
   
   # Apply the envelope to the white noise
@@ -289,33 +288,35 @@ function generate_crash_cymbal(sample_rate, duration)
   # Apply a bandpass filter to emphasize the metallic tone of the cymbal
   bpf = digitalfilter(Bandpass(2000, 8000; fs=sample_rate), Butterworth(4))
   filtered_crash_sound = filt(bpf, crash_sound)
+
+  filtered_crash_sound /= maximum(abs.(filtered_crash_sound))  # Normalization
   
   return filtered_crash_sound
 end
 
-# Parameters for the crash cymbal sound
-sample_rate = 44100  # Sample rate in Hz
-duration = 2.0       # Duration of the sound in seconds
-
 # Generate the crash cymbal sound
-crash_cymbal_sound = generate_crash_cymbal(sample_rate, duration)
-
-# Normalize the crash cymbal sound to prevent clipping
-crash_cymbal_sound /= maximum(abs.(crash_cymbal_sound))
+crash_cymbal_sound = generate_crash_cymbal(sample_rate, 2.0)
 
 # Save the crash cymbal sound to a WAV file
 wavwrite(crash_cymbal_sound, "crash_cymbal.wav", Fs=sample_rate)
 
-# If you want to play the sound directly (ensure your environment supports it)
-# soundsc(crash_cymbal_sound, sample_rate)
+hihat = hihat[1:11025]
+bass_drum_sound = bass_drum_sound[1:11025]
+snare_sound = snare_sound[1:11025]
 
-function generate_crash_cymbal(sample_rate, duration)
-  noise = randn(Float64, round(Int, sample_rate * duration))
-  t = collect(0:1/sample_rate:(duration - 1/sample_rate))
-  envelope = exp.(-5 * t)
-  crash_cymbal_sound = noise .* envelope
-  bpf = digitalfilter(Bandpass(2000, 8000; fs=sample_rate), Butterworth(4))
-  filtered_crash_sound = filt(bpf, crash_sound)
-  filtered_crash_sound /= maximum(abs.(filtered_crash_sound))  # Normalization
-  return filtered_crash_sound
+wavwrite(bass_drum_sound, "bass_drum_normalized.wav", Fs=sample_rate)
+
+loop = zeros(2 * sample_rate)
+eigthNote = 11025
+print(length(hi_hat_sound))
+for i in 1:8
+  loop[(i-1)*eigthNote+1:i*eigthNote] .+= hihat
 end
+for i in 1:2:8
+  loop[(i-1)*eigthNote+1:i*eigthNote] .+= bass_drum_sound
+end
+for i in 3:4:8
+  loop[(i-1)*eigthNote+1:i*eigthNote] .+= snare_sound
+end
+
+soundsc(loop, sample_rate)

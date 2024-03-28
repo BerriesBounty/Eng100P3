@@ -14,21 +14,38 @@ playNote = false;
 index = 1;
 freql = [523.25, 554.37, 587.33, 622.25, 659.26, 698.46, 739.99, 783.99, 830.61, 880, 932.33, 987.77]
 
-w = GtkWindow("Key Press/Release Example")
+using Gtk: GtkGrid, GtkScale, GtkWindow, GAccessor
+using Gtk: signal_connect, set_gtk_property!, showall
 
-id1 = signal_connect(w, "key-press-event") do widget, event
+win = GtkWindow("Sliders", 500, 200)
+slider1 = GtkScale(false, 0:10)
+slider2 = GtkScale(false, 0:30)
+signal_connect(slider1, "value-changed") do widget, others...
+    value = GAccessor.value(slider1)
+    GAccessor.value(slider2, value) # dynamic value adjustment
+    println("slider value is $value")
+    if value == 10
+        GAccessor.range(slider1, 1, 20) # dynamic range adjustment
+    end
+end
+g = GtkGrid()
+g[1,1] = slider1
+g[1,2] = slider2
+set_gtk_property!(g, :column_homogeneous, true)
+push!(win, g)
+showall(win)
+
+id1 = signal_connect(win, "key-press-event") do widget, event
     k = event.keyval
     if k ∉ keys(start_times)
         start_times[k] = event.time # save the initial key press time
         println("You pressed key ", k, " which is '", Char(k), "'.")
         global playNote = true;
         global index = k%length(freql) + 1
-    else
-        println(playNote)
     end
 end
 
-id2 = signal_connect(w, "key-release-event") do widget, event
+id2 = signal_connect(win, "key-release-event") do widget, event
     k = event.keyval
     start_time = pop!(start_times, k) # remove the key from the dictionary
     duration = event.time - start_time # key press duration in milliseconds
@@ -47,7 +64,6 @@ function play_tone(stream, freq::Real, duration::Real; buf_size::Int = 1024)
     
     while current < duration*S
         amplitude = 0
-        freq1 = freql[index];
         if(playNote)
           amplitude = 0.7
         end

@@ -115,7 +115,7 @@ wavwrite(hihat, "hihat.wav", Fs=sample_rate)
 
 
 # Function to generate and normalize a bass drum sound
-function generate_and_normalize_bass_drum(sample_rate, duration, start_freq, end_freq)
+function generate_and_normalize_bass_drum(sample_rate, duration, start_freq, end_freq, amplification_factor)
   # Time vector
   t = 0:1/sample_rate:duration
 
@@ -123,18 +123,23 @@ function generate_and_normalize_bass_drum(sample_rate, duration, start_freq, end
   freq_decay = exp.(log.(end_freq / start_freq) .* t / duration) .* start_freq
 
   # Amplitude envelope to simulate the strike decay
-  amp_decay = exp.(-15 * t)
+  amp_decay = exp.(-10 * t)
+  # changed -15 to -10
 
   # Generate the tone with varying frequency
   signal = sin.(2 * π * freq_decay .* t) .* amp_decay
 
+  amplified_signal = signal * amplification_factor 
+
   # Optionally, apply a low-pass filter to smooth the sound
   lpf = digitalfilter(Lowpass(100; fs=sample_rate), Butterworth(2))
-  filtered_signal = filt(lpf, signal)
+  filtered_signal = filt(lpf, amplified_signal)
+
+  soft_clipped_signal = tanh.(filtered_signal)
 
   # Normalize the signal to ensure it's between -1 and 1
-  max_amp = maximum(abs.(filtered_signal))
-  normalized_signal = filtered_signal / max_amp
+  max_amp = maximum(abs.(soft_clipped_signal))
+  normalized_signal = soft_clipped_signal / max_amp
 
   return normalized_signal
 end
@@ -143,9 +148,12 @@ sample_rate = 44100
 duration = 0.25
 start_freq = 150
 end_freq = 60
+amplification_factor = 6
+
+
 
 # Generate and normalize the bass drum sound
-bass_drum_sound = generate_and_normalize_bass_drum(sample_rate, duration, start_freq, end_freq)
+bass_drum_sound = generate_and_normalize_bass_drum(sample_rate, duration, start_freq, end_freq, amplification_factor)
 
 # Save the bass drum sound to a WAV file
 wavwrite(bass_drum_sound, "bass_drum_normalized.wav", Fs=sample_rate)

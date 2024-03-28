@@ -38,7 +38,7 @@ using PortAudio
 # amp = create_exponential_tone(10000, 10, 0.1, sample_rate)
 # sound(amp, sample_rate)
 #-------------experiments---------------------
-stream = PortAudioStream(0, 1; warn_xruns=false)
+
 #create an exponential function 
 function expon(start_val, end_val, dur, t)
   return start_val * ((end_val / start_val) ^ (t / dur))
@@ -293,6 +293,7 @@ function generate_crash_cymbal(sample_rate, duration)
   
   return filtered_crash_sound
 end
+
 
 # Generate the crash cymbal sound
 crash_cymbal_sound = generate_crash_cymbal(sample_rate, 2.0)

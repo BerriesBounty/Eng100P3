@@ -27,7 +27,11 @@ function miditone(idx::Int, note::Int, nsample::Int = N)
     x = percussion[note]
     write(stream, x) # play note so that user can hear it immediately
     global song[(idx-1)*N+1:(idx-1)*N+length(x), note] += x
-    return nothing
+
+    b_green = GtkCssProvider(data="#gogreen {color:yellow; background:green;}")
+    push!(GAccessor.style_context(g[idx, note]), GtkStyleProvider(b_green), 600)
+    set_gtk_property!(g[idx, note], :name, "gogreen")
+
 end
 
 for i in 1:16 # add the white keys to the grid

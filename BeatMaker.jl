@@ -1,6 +1,7 @@
 using Gtk
 using Sound: soundsc
 using WAV
+using PortAudio: PortAudioStream, write
 
 g = GtkGrid() # initialize a grid to hold buttons
 set_gtk_property!(g, :row_spacing, 5) # gaps between buttons
@@ -13,6 +14,8 @@ N = 11025
 freqs = [67; 69; 71; 73]
 song = zeros(4*S) * ones(4)'
 
+stream = PortAudioStream(0, 1; warn_xruns=false)
+
 bass_drum, _ = wavread("bass_drum_normalized.wav")
 hi_hat, _ = wavread("hihat.wav")
 snare, _ = wavread("snare.wav")
@@ -22,8 +25,8 @@ print(size(percussion))
 
 function miditone(idx::Int, note::Int, nsample::Int = N)
     x = percussion[note]
-    sound(x, S) # play note so that user can hear it immediately
-    global song[(idx-1)*N+1:(idx-1)*N+1+length(x), note] += x
+    write(stream, x) # play note so that user can hear it immediately
+    global song[(idx-1)*N+1:(idx-1)*N+length(x), note] += x
     return nothing
 end
 
@@ -37,7 +40,7 @@ end
 
 function play()
     beat = song[:,1] + song[:,2] + song[:,3] + song[:,4]
-    soundsc(beat, S)
+    write(stream, beat)
 end
 
 a = GtkButton("play")

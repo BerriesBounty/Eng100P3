@@ -72,7 +72,6 @@ function play_tone(stream, freq::Real, duration::Real; buf_size::Int = 1024)
         write(stream, x)
         current += buf_size
     end
-    nothin
 end
 
 play_tone(stream, 440, 5)

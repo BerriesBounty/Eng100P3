@@ -137,7 +137,7 @@ function generate_and_normalize_bass_drum(sample_rate, duration, start_freq, end
 
   soft_clipped_signal = tanh.(filtered_signal)
 
-  # Normalize the signal to ensure it's between -1 and 1
+  # Normalize the signal
   max_amp = maximum(abs.(soft_clipped_signal))
   normalized_signal = soft_clipped_signal / max_amp
 

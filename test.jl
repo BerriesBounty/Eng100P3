@@ -58,7 +58,7 @@ stream = PortAudioStream(0, 1; warn_xruns=false)
 
 song = zeros(round(Int, 20 * stream.sample_rate))
 
-function play_tone(stream, freq::Real, duration::Real; buf_size::Int = 1024)
+function play_tone(stream, duration::Real; buf_size::Int = 1024)
     S = stream.sample_rate
     current = 1
     
@@ -74,7 +74,7 @@ function play_tone(stream, freq::Real, duration::Real; buf_size::Int = 1024)
     end
 end
 
-play_tone(stream, 440, 5)
+play_tone(stream, 5)
 soundsc(song, stream.sample_rate)
 # PortAudioStream(0, 1; 44100) do stream
 #     write(stream, bassDrum())

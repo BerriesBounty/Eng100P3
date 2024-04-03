@@ -37,8 +37,10 @@ function miditone(idx::Int, note::Int, g::GtkGrid, nsample::Int = N)
 end
 
 function play()
+    @async begin
     beat = song[:,1] + song[:,2] + song[:,3] + song[:,4]
     write(stream, beat)
+    end
 end
 
 function getGrid()

@@ -56,7 +56,8 @@ end
 stream = PortAudioStream(0, 1; warn_xruns=false)
 
 
-song = zeros(round(Int, 20 * stream.sample_rate))
+#song = zeros(round(Int, 20 * stream.sample_rate))
+song = 0.5 * getNote(index, 2)
 
 function play_tone(stream, duration::Real; buf_size::Int = 1024)
     S = stream.sample_rate
@@ -67,9 +68,9 @@ function play_tone(stream, duration::Real; buf_size::Int = 1024)
         if(playNote)
           amplitude = 0.7
         end
-        x = amplitude * getNote(index, 1)
-        global song[current:current+buf_size-1] = x[1:buf_size];
-        write(stream, x)
+        x = amplitude * getNote(index, 2)
+        global song[current:current+buf_size] += x[current:current+buf_size];
+        write(stream, song[current:current+buf_size])
         current += buf_size
     end
 end

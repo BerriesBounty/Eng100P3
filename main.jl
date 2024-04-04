@@ -43,9 +43,9 @@ end
 signal_connect(switch_to_grid1, button_switch_to_grid1, "clicked")
 signal_connect(switch_to_grid2, button_switch_to_grid2, "clicked")
 
-g[1,1:4] = tracks
-g[1,5:8] = beatmaker
-g[1, 5] = g2
+g[1,1] = tracks
+g[1,2] = beatmaker
+g[1, 2] = g2
 
 push!(win, g)
 showall(win)

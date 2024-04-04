@@ -9,8 +9,8 @@ using DSP: Windows
 
 (x, S) = wavread("project3.wav"); #soundsc(x, S)
 
-M = round(Int, S/3)
-window = Windows.kaiser(M+1, 1)[1:M] # Hanning window
+M = round(Int, S/4)
+window = Windows.hanning(M+1)[1:M] # Hanning window
 
 N = length(x)
 noteLength = round(Int, N/(13*4))
@@ -31,7 +31,7 @@ end
 
 function getNote(idx, j)
   signal = instruments[(idx-1)*noteLength+1:idx*noteLength, j]
-  duration = Int(2 * S)
+  duration = Int(20 * S)
   Nseg = round(Int, duration/M)
   print(Nseg)
   sustain = signal[(1:M) .+ round(Int, attack*S)]
@@ -44,6 +44,4 @@ function getNote(idx, j)
   return z
 end
 
-note = getNote(4,1)
-soundsc(note, S)
-plot(note)
+

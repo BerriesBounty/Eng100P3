@@ -19,36 +19,36 @@ onoff = Bool.(zeros(16) * ones(4)')
 
 function miditone(idx::Int, note::Int, g::GtkGrid, nsample::Int = N)
     x = percussion[note]
-    write(stream, x) # play note so that user can hear it immediately
-    if onoff[idx, note] == 0
-        global song[(idx-1)*N+1:(idx-1)*N+length(x), note] += x
+    write(stream,(amp[note]/10)*x) # play note so that user can hear it immediately
+    if onoff[idx-2, note] == 0
+        global song[(idx-3)*N+1:(idx-3)*N+length(x), note] += x
         b_color = GtkCssProvider(data="#gocolor {background:" * colors[note] * ";}")
         push!(GAccessor.style_context(g[idx, note]), GtkStyleProvider(b_color), 600)
         set_gtk_property!(g[idx, note], :name, "gocolor")
-        onoff[idx,note] = 1
+        onoff[idx-2,note] = 1
     else
-        global song[(idx-1)*N+1:(idx-1)*N+length(x), note] -= x
+        global song[(idx-3)*N+1:(idx-3)*N+length(x), note] -= x
         b_color = GtkCssProvider(data="#gocolor {background:none;}")
         push!(GAccessor.style_context(g[idx, note]), GtkStyleProvider(b_color), 600)
         set_gtk_property!(g[idx, note], :name, "gocolor")
-        onoff[idx,note] = 0
+        onoff[idx-2,note] = 0
     end
 
 end
 
 function play()
-    beat = song[:,1] + song[:,2] + song[:,3] + song[:,4]
+    beat = (amp[1]/10)*song[:,1] + (amp[2]/10)*song[:,2] + (amp[3]/10)*song[:,3] + (amp[4]/10)*song[:,4]
     write(stream, beat)
 end
 
-function getGrid()
+#function getBeats()
     g = GtkGrid() # initialize a grid to hold buttons
     set_gtk_property!(g, :row_spacing, 5) # gaps between buttons
     set_gtk_property!(g, :column_spacing, 5)
     set_gtk_property!(g, :row_homogeneous, true) # stretch with window resize
     set_gtk_property!(g, :column_homogeneous, true)
 
-    for i in 1:16 # add the white keys to the grid
+    for i in 3:18 # add the white keys to the grid
         for n in 1:4
         b = GtkButton() # make a button for this key
         signal_connect((w) -> miditone(i, n, g), b, "clicked")
@@ -59,10 +59,28 @@ function getGrid()
     a = GtkButton("play")
     g[1,5] = a
     signal_connect((w) -> play(), a, "clicked")
+        
+    names = ("Base Drum", "High Hat", "Snare", "Crash")
+    for i in 1:4
+        name = GtkLabel(names[i]) # make a button for this key
+        g[1, i] = name # put the button in row 2 of the grid
+    end
 
-    return g
+    amp = [3.0, 3.0, 3.0, 3.0]
 
-# win = GtkWindow("Beat Maker",400, 300)
-# push!(win, g)
-# showall(win)
-end
+    for i in 1:4
+        volume = GtkScale(false, 0:5) # make a button for this key
+        g[2, i] = volume # put the button in row 2 of the grid
+        GAccessor.value(volume, 3)
+        signal_connect(volume, "value-changed") do widget, others...
+            value = GAccessor.value(volume)
+            amp[i] = value^2
+        end
+    end
+
+#    return g
+
+win = GtkWindow("Beat Maker",400, 300)
+push!(win, g)
+showall(win)
+#end

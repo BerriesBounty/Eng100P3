@@ -9,6 +9,7 @@ using Plots;
 using Sound: soundsc
 include("BeatMaker.jl")
 include("tracks.jl")
+include("Keys.jl")
 using Gtk
 
 win = GtkWindow("Sliders", 500, 200)
@@ -20,23 +21,23 @@ set_gtk_property!(g, :column_spacing, 5)
 # push!(GAccessor.style_context(g), GtkStyleProvider(g_style), 600)
 # set_gtk_property!(g, :name, "wb") # set "style" of undo key
 tracks = getTracks()
+beatmaker = getBeats()
+keyboard = getKeys()
 
-beatmaker = getGrid()
-g2 = GtkGrid();
 
 button_switch_to_grid2 = Gtk.Button("Go to Grid 2")
 button_switch_to_grid1 = Gtk.Button("Go to Grid 1")
 
 beatmaker[2,5] =  button_switch_to_grid2
-g2[1,1] = button_switch_to_grid1
+keyboard[1,5] = button_switch_to_grid1
 
 function switch_to_grid2(widget)
   hide(beatmaker)
-  show(g2)
+  show(keyboard)
 end
 
 function switch_to_grid1(widget)
-  hide(g2)
+  hide(keyboard)
   show(beatmaker)
 end
 
@@ -45,10 +46,10 @@ signal_connect(switch_to_grid2, button_switch_to_grid2, "clicked")
 
 g[1,1:4] = tracks
 g[1,5:8] = beatmaker
-g[1, 5] = g2
+g[1,5:8] = keyboard
 
 push!(win, g)
 showall(win)
 
-hide(g2)
+hide(keyboard)
 show(beatmaker)

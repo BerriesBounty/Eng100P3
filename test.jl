@@ -18,30 +18,23 @@ using Gtk: GtkGrid, GtkScale, GtkWindow, GAccessor
 using Gtk: signal_connect, set_gtk_property!, showall
 
 win = GtkWindow("Sliders", 500, 200)
-slider1 = GtkScale(false, 0:10)
-slider2 = GtkScale(false, 0:30)
-signal_connect(slider1, "value-changed") do widget, others...
-    value = GAccessor.value(slider1)
-    GAccessor.value(slider2, value) # dynamic value adjustment
-    println("slider value is $value")
-    if value == 10
-        GAccessor.range(slider1, 1, 20) # dynamic range adjustment
-    end
-end
 g = GtkGrid()
-g[1,1] = slider1
-g[1,2] = slider2
 set_gtk_property!(g, :column_homogeneous, true)
 push!(win, g)
 showall(win)
+
+keyboardToNote = Dict(Int('a') => 1, Int('w') => 2, Int('s') => 3, Int('e') => 4, Int('d') => 5, Int('f') => 6, Int('t') => 7, Int('g') => 8, Int('y') => 9,
+                 Int('h') => 10, Int('j') => 11, Int('i') => 12, Int('k') => 13 ) 
 
 id1 = signal_connect(win, "key-press-event") do widget, event
     k = event.keyval
     if k ∉ keys(start_times)
         start_times[k] = event.time # save the initial key press time
         println("You pressed key ", k, " which is '", Char(k), "'.")
-        global playNote = true;
-        global index = k%length(freql) + 1
+        if(get(keyboardToNote, k, -1) != -1)
+            global playNote = true;
+            global index = keyboardToNote[k]
+        end
     end
 end
 
@@ -54,12 +47,10 @@ id2 = signal_connect(win, "key-release-event") do widget, event
 end
 
 stream = PortAudioStream(0, 1; warn_xruns=false)
+songVec = zeros(round(Int, 7 * stream.sample_rate))
+#song = 0.5 * getNote(1, 3)
 
-
-#song = zeros(round(Int, 20 * stream.sample_rate))
-song = 0.5 * getNote(index, 2)
-
-function play_tone(stream, duration::Real; buf_size::Int = 1024)
+function play_tone(stream, duration::Real, song::Vector; buf_size::Int = 1024)
     S = stream.sample_rate
     current = 1
     
@@ -68,15 +59,16 @@ function play_tone(stream, duration::Real; buf_size::Int = 1024)
         if(playNote)
           amplitude = 0.7
         end
-        x = amplitude * getNote(index, 2)
-        global song[current:current+buf_size] += x[current:current+buf_size];
-        write(stream, song[current:current+buf_size])
+        x = amplitude * getNote(index, 3)
+        global song[current+1:current+buf_size] += x[current+1:current+buf_size];
+        write(stream, song[current+1:current+buf_size])
         current += buf_size
     end
+    return song
 end
 
-play_tone(stream, 5)
-soundsc(song, stream.sample_rate)
+# songVec = play_tone(stream, 5, songVec)
+# soundsc(songVec, stream.sample_rate)
 # PortAudioStream(0, 1; 44100) do stream
 #     write(stream, bassDrum())
 #   end

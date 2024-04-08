@@ -14,6 +14,7 @@ window = Windows.hanning(M+1)[1:M] # Hanning window
 
 N = length(x)
 noteLength = round(Int, N/(13*4))
+
 numNotes = 13*4
 instruments = zeros(round(Int,N/4)) * ones(4)'
 for j in 1:4
@@ -33,7 +34,6 @@ function getNote(idx, j)
   signal = instruments[(idx-1)*noteLength+1:idx*noteLength, j]
   duration = Int(20 * S)
   Nseg = round(Int, duration/M)
-  print(Nseg)
   sustain = signal[(1:M) .+ round(Int, attack*S)]
   sustain = sustain .* window
   z = zeros(round(Int, duration))
@@ -43,5 +43,3 @@ function getNote(idx, j)
   end
   return z
 end
-
-

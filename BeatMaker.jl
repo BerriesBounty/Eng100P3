@@ -58,7 +58,7 @@ function getGrid()
         end
     end
 
-    a = GtkButton("play")
+    a = GtkButton("Play Drums")
     g[1,5] = a
     signal_connect((w) -> play(), a, "clicked")
 
@@ -67,4 +67,8 @@ function getGrid()
 # win = GtkWindow("Beat Maker",400, 300)
 # push!(win, g)
 # showall(win)
+end
+
+function getBeat()
+    return song[:,1] + song[:,2] + song[:,3] + song[:,4]
 end

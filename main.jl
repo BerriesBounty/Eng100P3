@@ -11,7 +11,7 @@ include("BeatMaker.jl")
 include("tracks.jl")
 using Gtk
 
-win = GtkWindow("Sliders", 500, 200)
+win = GtkWindow("Sliders", 400, 200)
 g = GtkGrid()
 set_gtk_property!(g, :row_spacing, 5) # gaps between buttons
 set_gtk_property!(g, :column_spacing, 5)

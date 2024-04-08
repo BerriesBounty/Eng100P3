@@ -40,6 +40,7 @@ end
 function play()
     beat = (amp[1]/10)*song[:,1] + (amp[2]/10)*song[:,2] + (amp[3]/10)*song[:,3] + (amp[4]/10)*song[:,4]
     write(stream, beat)
+    end
 end
 
 function getBeats()

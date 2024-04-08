@@ -16,6 +16,7 @@ crash, _ = wavread("crash_cymbal.wav")
 percussion = [bass_drum, hi_hat, snare, crash]
 colors = ("red", "blue", "green", "purple")
 onoff = Bool.(zeros(16) * ones(4)')
+amp = [3.0, 3.0, 3.0, 3.0]
 
 function miditone(idx::Int, note::Int, g::GtkGrid, nsample::Int = N)
     x = percussion[note]
@@ -41,7 +42,7 @@ function play()
     write(stream, beat)
 end
 
-#function getBeats()
+function getBeats()
     g = GtkGrid() # initialize a grid to hold buttons
     set_gtk_property!(g, :row_spacing, 5) # gaps between buttons
     set_gtk_property!(g, :column_spacing, 5)
@@ -66,8 +67,6 @@ end
         g[1, i] = name # put the button in row 2 of the grid
     end
 
-    amp = [3.0, 3.0, 3.0, 3.0]
-
     for i in 1:4
         volume = GtkScale(false, 0:5) # make a button for this key
         g[2, i] = volume # put the button in row 2 of the grid
@@ -78,9 +77,9 @@ end
         end
     end
 
-#    return g
+    return g
 
-win = GtkWindow("Beat Maker",400, 300)
-push!(win, g)
-showall(win)
-#end
+#win = GtkWindow("Beat Maker",400, 300)
+#push!(win, g)
+#showall(win)
+end

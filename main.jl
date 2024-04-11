@@ -107,25 +107,34 @@ end
 
 function switchInstrument(i)
   global curInstrument = i;
+  if(i==5)
+    switch_to_grid1()
+  else
+    switch_to_grid2()
+  end
 end
 
 function getTracks()
+  names = ("Piano", "Sax", "Flute", "Tuba","Drum")
   g = GtkGrid() # initialize a grid to hold buttons
   trackGridStyle = GtkCssProvider(data="#track {background:blue;}")
   set_gtk_property!(g, :row_spacing, 5) # gaps between buttons
   set_gtk_property!(g, :column_spacing, 5)
 
-  for i in 1:4 # add the white keys to the grid
-    b = GtkButton() # make a button for this key
+  for i in 1:5 # add the white keys to the grid
+    b = GtkButton(names[i]) # make a button for this key
     signal_connect((w) -> switchInstrument(i), b, "clicked")
-    g[1, i] = b # put the button in row 2 of the grid
+    g[2:3, i] = b # put the button in row 2 of the grid
   end
+
+
 
   g2 = GtkGrid()
   set_gtk_property!(g2, :name, "track")
   push!(GAccessor.style_context(g2), GtkStyleProvider(trackGridStyle), 600)
   g[4:10, 2:5] = g2
   return g
+
 end
 
 # g_style = GtkCssProvider(data="#wb {background:blue;}")
@@ -146,22 +155,18 @@ signal_connect((w) -> record(), recordButton, "clicked")
 topBar[2, 1] = recordButton
 g[1,1] = topBar
 
-button_switch_to_grid2 = Gtk.Button("Go to Grid 2")
-button_switch_to_grid1 = Gtk.Button("Go to Grid 1")
+keyboard[1,5] = button_switch_to_grid1
 
-
-function switch_to_grid2(widget)
+function switch_to_grid2()
   hide(beatmaker)
   show(keyboard)
 end
 
-function switch_to_grid1(widget)
+function switch_to_grid1()
   hide(keyboard)
   show(beatmaker)
 end
 
-signal_connect(switch_to_grid1, button_switch_to_grid1, "clicked")
-signal_connect(switch_to_grid2, button_switch_to_grid2, "clicked")
 
 g[1:10,2:5] = tracks
 g[1:10,6:9] = beatmaker
@@ -170,8 +175,8 @@ g[1:10,6:9] = keyboard
 push!(win, g)
 showall(win)
 
-hide(keyboard)
-show(beatmaker)
+show(keyboard)
+hide(beatmaker)
 
 function play_tone()
   @async begin

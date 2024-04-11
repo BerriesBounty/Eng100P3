@@ -29,7 +29,7 @@ function miditone(idx::Int, note::Int, g::GtkGrid, nsample::Int = beatN)
         set_gtk_property!(g[idx, note], :name, "gocolor")
         onoff[idx-2,note] = 1
     else
-        global beat[(idx-3)*N+1:(idx-3)*N+length(x), note] -= x
+        global beat[(idx-3)*nsample+1:(idx-3)*nsample+length(x), note] -= x
         b_color = GtkCssProvider(data="#gocolor {background:none;}")
         push!(GAccessor.style_context(g[idx, note]), GtkStyleProvider(b_color), 600)
         set_gtk_property!(g[idx, note], :name, "gocolor")
@@ -45,6 +45,8 @@ end
 
 function getBeats()
     g = GtkGrid() # initialize a grid to hold buttons
+    trackGridStyle = GtkCssProvider(data="#track {background:blue;}")
+    push!(GAccessor.style_context(g), GtkStyleProvider(trackGridStyle), 600)
     set_gtk_property!(g, :row_spacing, 5) # gaps between buttons
     set_gtk_property!(g, :column_spacing, 5)
     set_gtk_property!(g, :row_homogeneous, true) # stretch with window resize
@@ -88,5 +90,6 @@ function getBeats()
 end
 
 function getBeat()
-    return song[:,1] + song[:,2] + song[:,3] + song[:,4]
+    song = (amp[1]/10)*beat[:,1] + (amp[2]/10)*beat[:,2] + (amp[3]/10)*beat[:,3] + (amp[4]/10)*beat[:,4]
+    return song
 end

@@ -22,7 +22,7 @@ playNote = false;
 canPlay = true;
 recording = false;
 curInstrument = 1;
-index = 1;
+index = -1;
 stream = PortAudioStream(0, 1; warn_xruns=false)
 #keyboard pressing-----------------------
 keyboardToNote = Dict(Int('a') => 1, Int('w') => 2, Int('s') => 3, Int('e') => 4, Int('d') => 5, Int('f') => 6, Int('t') => 7, Int('g') => 8, Int('y') => 9,
@@ -34,11 +34,17 @@ id1 = signal_connect(win, "key-press-event") do widget, event
       println("You pressed key ", k, " which is '", Char(k), "'.")
       if(get(keyboardToNote, k, -1) != -1)
           global index = keyboardToNote[k]
-          if(canPlay)
-            global playNote = true;
+          if(canPlay)  
             play_tone()
           end
       end
+  else
+    if(index == -1)
+      global index = keyboardToNote[k]
+      if(canPlay)  
+        play_tone()
+      end
+    end
   end
 end
 
@@ -47,8 +53,10 @@ id2 = signal_connect(win, "key-release-event") do widget, event
   start_time = pop!(start_times, k) # remove the key from the dictionary
   duration = event.time - start_time # key press duration in milliseconds
   println("You released key ", k, " after time ", duration, " msec.")
-  global playNote = false
-  global current = 0
+  if(keyboardToNote[k] == index)
+    global index = -1
+    global current = 0
+  end
 end
 
 function play(g::GtkGrid)
@@ -65,7 +73,7 @@ function play(g::GtkGrid)
 end
 
 function record()
-  canPlay = false;
+  global canPlay = false;
   S = 44100
   bpm = 120
   bps = bpm / 60 # beats per second
@@ -79,9 +87,9 @@ function record()
   song = [x; beat];
   cur = 1
   @async begin
-    while cur < 16*S
+    while cur < 8*S
         amplitude = 0
-        if(playNote)
+        if(index != -1)
           amplitude = 0.7
         end
         x = amplitude * getNote(index, curInstrument)
@@ -89,6 +97,8 @@ function record()
         write(stream, song[cur+1:cur+buf_size])
         cur += buf_size
     end
+    write(stream, song)
+    global canPlay = true;
     return song
   end
 end
@@ -105,6 +115,7 @@ end
 function getTracks()
   names = ("Piano", "Sax", "Flute", "Tuba","Drum")
   g = GtkGrid() # initialize a grid to hold buttons
+  trackGridStyle = GtkCssProvider(data="#track {background:blue;}")
   set_gtk_property!(g, :row_spacing, 5) # gaps between buttons
   set_gtk_property!(g, :column_spacing, 5)
 
@@ -118,7 +129,8 @@ function getTracks()
 
   g2 = GtkGrid()
   set_gtk_property!(g2, :name, "track")
-  g[3, 2:5] = g2
+  push!(GAccessor.style_context(g2), GtkStyleProvider(trackGridStyle), 600)
+  g[4:10, 2:5] = g2
   return g
 
 end
@@ -138,7 +150,7 @@ topBar[1, 1] = playButton
 
 recordButton = GtkButton("Record")
 signal_connect((w) -> record(), recordButton, "clicked")
-topBar[3, 1] = recordButton
+topBar[2, 1] = recordButton
 g[1,1] = topBar
 
 keyboard[1,5] = button_switch_to_grid1
@@ -166,13 +178,11 @@ hide(beatmaker)
 
 function play_tone()
   @async begin
-    while playNote
-      if (playNote)
-        amplitude = 0.7
-        x = amplitude * getNote(index, curInstrument)
-        write(stream, x[current+1:current+buf_size])
-        global current += buf_size
-      end
+    while index != -1
+      amplitude = 0.7
+      x = amplitude * getNote(index, curInstrument)
+      write(stream, x[current+1:current+buf_size])
+      global current += buf_size
     end
   end 
 end

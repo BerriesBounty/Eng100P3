@@ -27,6 +27,8 @@ stream = PortAudioStream(0, 1; warn_xruns=false)
 #keyboard pressing-----------------------
 keyboardToNote = Dict(Int('a') => 1, Int('w') => 2, Int('s') => 3, Int('e') => 4, Int('d') => 5, Int('f') => 6, Int('t') => 7, Int('g') => 8, Int('y') => 9,
                  Int('h') => 10, Int('j') => 11, Int('i') => 12, Int('k') => 13 ) 
+beat = zeros(6*S) * ones(4)'
+
 id1 = signal_connect(win, "key-press-event") do widget, event
   k = event.keyval
   if k ∉ keys(start_times)
@@ -91,9 +93,9 @@ function record()
         amplitude = 0
         if(index != -1)
           amplitude = 0.7
+          x = amplitude * getNote(index, curInstrument)
+          song[cur+1:cur+buf_size] += x[cur+1:cur+buf_size];
         end
-        x = amplitude * getNote(index, curInstrument)
-        global song[cur+1:cur+buf_size] += x[cur+1:cur+buf_size];
         write(stream, song[cur+1:cur+buf_size])
         cur += buf_size
     end
@@ -147,8 +149,6 @@ g[1,1] = topBar
 button_switch_to_grid2 = Gtk.Button("Go to Grid 2")
 button_switch_to_grid1 = Gtk.Button("Go to Grid 1")
 
-keyboard[2,5] = button_switch_to_grid1
-beatmaker[2,5] = button_switch_to_grid2
 
 function switch_to_grid2(widget)
   hide(beatmaker)

@@ -70,15 +70,15 @@ function getBeats()
         g[1, i] = name # put the button in row 2 of the grid
     end
 
-    # for i in 1:4
-    #     volume = GtkScale(false, 0:5) # make a button for this key
-    #     g[2, i] = volume # put the button in row 2 of the grid
-    #     GAccessor.value(volume, 3)
-    #     signal_connect(volume, "value-changed") do widget, others...
-    #         value = GAccessor.value(volume)
-    #         amp[i] = value^2
-    #     end
-    # end
+    for i in 1:4
+        volume = GtkScale(false, 0:5) # make a button for this key
+        g[2, i] = volume # put the button in row 2 of the grid
+        GAccessor.value(volume, 3)
+        signal_connect(volume, "value-changed") do widget, others...
+            value = GAccessor.value(volume)
+            amp[i] = value^2
+        end
+    end
     set_gtk_property!(scroll, :child, g)
     return scroll
 

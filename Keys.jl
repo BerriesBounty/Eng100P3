@@ -33,15 +33,15 @@ function getKeys()
 
     amp = [3.0, 3.0, 3.0, 3.0]
 
-    for i in 1:4
-        volume = GtkScale(false, 1:5) # make a button for this key
-        g[2, i] = volume # put the button in row 2 of the grid
-        GAccessor.value(volume, 3)
-        signal_connect(volume, "value-changed") do widget, others...
-            value = GAccessor.value(volume)
-            amp[i] = value^2
-        end
-    end
+    # for i in 1:4
+    #     volume = GtkScale(false, 1:5) # make a button for this key
+    #     g[2, i] = volume # put the button in row 2 of the grid
+    #     GAccessor.value(volume, 3)
+    #     signal_connect(volume, "value-changed") do widget, others...
+    #         value = GAccessor.value(volume)
+    #         amp[i] = value^2
+    #     end
+    # end
 
 
 #win = GtkWindow("Beat Maker",400, 300)

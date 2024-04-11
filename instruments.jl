@@ -41,5 +41,6 @@ function getNote(idx, j)
     index = (1:M) .+ (seg-1)*(M÷2)
     z[index] .+= sustain
   end
+  z = [getAttack(idx,j); z]
   return z
 end

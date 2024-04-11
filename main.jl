@@ -24,10 +24,12 @@ recording = false;
 curInstrument = 1;
 index = -1;
 stream = PortAudioStream(0, 1; warn_xruns=false)
+S = 44100
 #keyboard pressing-----------------------
 keyboardToNote = Dict(Int('a') => 1, Int('w') => 2, Int('s') => 3, Int('e') => 4, Int('d') => 5, Int('f') => 6, Int('t') => 7, Int('g') => 8, Int('y') => 9,
                  Int('h') => 10, Int('j') => 11, Int('i') => 12, Int('k') => 13 ) 
-beat = zeros(6*S) * ones(4)'
+instrumentRecordings = zeros((Int)(8*S)) * ones(4)'
+
 
 id1 = signal_connect(win, "key-press-event") do widget, event
   k = event.keyval
@@ -62,16 +64,11 @@ id2 = signal_connect(win, "key-release-event") do widget, event
 end
 
 function play(g::GtkGrid)
-  S = 44100
-  bpm = 120
-  bps = bpm / 60 # beats per second
-  spb = 60 / bpm # seconds per beat
-  t0 = 0.01 # each "tick" is this long
-  tt = 0:1/S:4 # 9 seconds of ticking
-  f = 440
-  #x = 0.9 * cos.(2π*440*tt) .* (mod.(tt, spb) .< t0) # tone
-  x = randn(length(tt)) .* (mod.(tt, spb) .< t0) / 4.5 # click via "envelope"
-  write(stream, x)
+  song = instrumentRecordings[:,1] + instrumentRecordings[:,2] + instrumentRecordings[:,3] + instrumentRecordings[:,4]
+  song = [song; zeros(2*S)]
+  #song += getBeat()
+  write(stream, song)
+  
 end
 
 function record()
@@ -94,7 +91,12 @@ function record()
         if(index != -1)
           amplitude = 0.7
           x = amplitude * getNote(index, curInstrument)
-          song[cur+1:cur+buf_size] += x[cur+1:cur+buf_size];
+          if(cur+1 > 4*S)
+            instrumentRecordings[cur+1:cur+buf_size, curInstrument] += x[cur+1:cur+buf_size]
+            song[cur+1:cur+buf_size] += instrumentRecordings[cur+1:cur+buf_size, curInstrument]
+          else
+            song[cur+1:cur+buf_size] += x[cur+1:cur+buf_size]
+          end
         end
         write(stream, song[cur+1:cur+buf_size])
         cur += buf_size
@@ -155,7 +157,6 @@ signal_connect((w) -> record(), recordButton, "clicked")
 topBar[2, 1] = recordButton
 g[1,1] = topBar
 
-keyboard[1,5] = button_switch_to_grid1
 
 function switch_to_grid2()
   hide(beatmaker)

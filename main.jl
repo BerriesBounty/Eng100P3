@@ -21,8 +21,12 @@ set_gtk_property!(g, :column_homogeneous, true)
 playNote = false;
 canPlay = true;
 recording = false;
-curInstrument = 1;
-index = -1;
+recordIndex = Array{Int, 2}(undef, 0, 3)
+recordingStartTime = 1
+noteStartTime = 1
+curInstrument = 1
+cur = 1
+index = -1
 stream = PortAudioStream(0, 1; warn_xruns=false)
 S = 44100
 #keyboard pressing-----------------------
@@ -30,25 +34,37 @@ keyboardToNote = Dict(Int('a') => 1, Int('w') => 2, Int('s') => 3, Int('e') => 4
                  Int('h') => 10, Int('j') => 11, Int('i') => 12, Int('k') => 13 ) 
 instrumentRecordings = zeros((Int)(8*S)) * ones(4)'
 
-
 id1 = signal_connect(win, "key-press-event") do widget, event
   k = event.keyval
   if k ∉ keys(start_times)
       start_times[k] = event.time # save the initial key press time
-      println("You pressed key ", k, " which is '", Char(k), "'.")
+      #println("You pressed key ", k, " which is '", Char(k), "'.")
       if(get(keyboardToNote, k, -1) != -1)
+          if(recording)
+            if(index == -1)
+              global noteStartTime = cur
+            else
+              duration = cur - noteStartTime 
+              startIndex = round(Int, noteStartTime/(2*beatN), RoundDown)
+              global recordIndex = vcat(recordIndex, [startIndex duration index])
+            end
+          end
           global index = keyboardToNote[k]
+          global CurrentNote = getNote(index, curInstrument)
+          global playNote = true
+          
           if(canPlay)  
             play_tone()
           end
       end
   else
-    if(index == -1)
-      global index = keyboardToNote[k]
-      if(canPlay)  
-        play_tone()
-      end
-    end
+    # if(index == -1)
+    #   global index = keyboardToNote[k]
+    #   global playNote = true
+    #   if(canPlay)  
+    #     play_tone()
+    #   end
+    # end
   end
 end
 
@@ -56,8 +72,13 @@ id2 = signal_connect(win, "key-release-event") do widget, event
   k = event.keyval
   start_time = pop!(start_times, k) # remove the key from the dictionary
   duration = event.time - start_time # key press duration in milliseconds
-  println("You released key ", k, " after time ", duration, " msec.")
+  #println("You released key ", k, " after time ", duration, " msec.")
   if(keyboardToNote[k] == index)
+    if(recording)
+      duration = cur - noteStartTime 
+      startIndex = round(Int, noteStartTime/(2*beatN), RoundDown)
+      global recordIndex = vcat(recordIndex, [startIndex duration index])
+    end
     global index = -1
     global current = 0
   end
@@ -66,34 +87,34 @@ end
 function play(g::GtkGrid)
   song = instrumentRecordings[:,1] + instrumentRecordings[:,2] + instrumentRecordings[:,3] + instrumentRecordings[:,4]
   song = [song; zeros(2*S)]
-  #song += getBeat()
+  song += getBeat()
   write(stream, song)
   
 end
 
 function record()
   global canPlay = false;
+  global recording = true;
   S = 44100
-  bpm = 120
+  bpm = 60
   bps = bpm / 60 # beats per second
   spb = 60 / bpm # seconds per beat
   t0 = 0.01 # each "tick" is this long
-  tt = 0:1/S:4 # 9 seconds of ticking
+  tt = 0:1/S:2 # 9 seconds of ticking
   f = 440
   #x = 0.9 * cos.(2π*440*tt) .* (mod.(tt, spb) .< t0) # tone
   x = randn(length(tt)) .* (mod.(tt, spb) .< t0) / 4.5 # click via "envelope"
   beat = getBeat()
   song = [x; beat];
-  cur = 1
+  global cur = 1
   @async begin
     while cur < 8*S
         amplitude = 0
-        if(index != -1)
+        if(index!=-1 && curInstrument!=5)
           amplitude = 0.7
           x = amplitude * getNote(index, curInstrument)
           if(cur+1 > 4*S)
-            instrumentRecordings[cur+1:cur+buf_size, curInstrument] += x[cur+1:cur+buf_size]
-            song[cur+1:cur+buf_size] += instrumentRecordings[cur+1:cur+buf_size, curInstrument]
+            song[cur+1:cur+buf_size] += x[cur+1:cur+buf_size]
           else
             song[cur+1:cur+buf_size] += x[cur+1:cur+buf_size]
           end
@@ -101,10 +122,15 @@ function record()
         write(stream, song[cur+1:cur+buf_size])
         cur += buf_size
     end
-    write(stream, song)
+    
     global canPlay = true;
-    return song
+    global recording = false;
+    for i in 1:size(recordIndex)[1]
+      x = 0.7 * getNote(recordIndex[i, 3], curInstrument)
+      instrumentRecordings[recordIndex[i, 1]*(2*beatN)+1:recordIndex[i, 1]*(2*beatN)+recordIndex[i, 2], curInstrument] += x[1:recordIndex[i,2]]
+    end
   end
+  
 end
 
 function switchInstrument(i)

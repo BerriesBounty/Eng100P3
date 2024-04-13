@@ -30,6 +30,11 @@ function getAttack(idx, j)
   return instruments[(idx-1)*noteLength+1:(idx-1)*noteLength+round(Int, attack*S), j]
 end
 
+function getRelease(idx, j)
+  signal = instruments[(idx-1)*noteLength+1:idx*noteLength, j]
+  return signal[length(signal)-11000:length(signal)]
+end
+
 function getNote(idx, j)
   signal = instruments[(idx-1)*noteLength+1:idx*noteLength, j]
   duration = Int(20 * S)
@@ -41,6 +46,7 @@ function getNote(idx, j)
     index = (1:M) .+ (seg-1)*(M÷2)
     z[index] .+= sustain
   end
-  z = [getAttack(idx,j); z]
+  attackSignal = getAttack(idx,j)
+  z = [attackSignal; z]
   return z
 end

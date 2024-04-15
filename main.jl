@@ -45,8 +45,9 @@ id1 = signal_connect(win, "key-press-event") do widget, event
               global noteStartTime = cur
             else
               duration = cur - noteStartTime 
-              startIndex = round(Int, noteStartTime/(2*beatN), RoundDown)
+              startIndex = round(Int, noteStartTime/(2*beatN))
               global recordIndex = vcat(recordIndex, [startIndex duration index])
+              global noteStartTime = cur
             end
           end
           global index = keyboardToNote[k]
@@ -76,7 +77,7 @@ id2 = signal_connect(win, "key-release-event") do widget, event
   if(keyboardToNote[k] == index)
     if(recording)
       duration = cur - noteStartTime 
-      startIndex = round(Int, noteStartTime/(2*beatN), RoundDown)
+      startIndex = round(Int, noteStartTime/(2*beatN))
       global recordIndex = vcat(recordIndex, [startIndex duration index])
     end
     global index = -1
@@ -85,6 +86,16 @@ id2 = signal_connect(win, "key-release-event") do widget, event
 end
 
 function play(g::GtkGrid)
+  S = 44100
+  bpm = 60
+  bps = bpm / 60 # beats per second
+  spb = 60 / bpm # seconds per beat
+  t0 = 0.01 # each "tick" is this long
+  tt = 1:1/S:4 # 9 seconds of ticking
+  f = 440
+  #x = 0.9 * cos.(2π*440*tt) .* (mod.(tt, spb) .< t0) # tone
+  x = randn(length(tt)) .* (mod.(tt, spb) .< t0) / 4.5 # click via "envelope"
+  canPlay = false;
   song = instrumentRecordings[:,1] + instrumentRecordings[:,2] + instrumentRecordings[:,3] + instrumentRecordings[:,4]
   song = [song; zeros(2*S)]
   song += getBeat()
@@ -93,6 +104,7 @@ function play(g::GtkGrid)
 end
 
 function record()
+  global recordIndex = Array{Int, 2}(undef, 0, 3)
   global canPlay = false;
   global recording = true;
   S = 44100
@@ -100,15 +112,15 @@ function record()
   bps = bpm / 60 # beats per second
   spb = 60 / bpm # seconds per beat
   t0 = 0.01 # each "tick" is this long
-  tt = 0:1/S:2 # 9 seconds of ticking
+  tt = 0:1/S:4 # 9 seconds of ticking
   f = 440
   #x = 0.9 * cos.(2π*440*tt) .* (mod.(tt, spb) .< t0) # tone
   x = randn(length(tt)) .* (mod.(tt, spb) .< t0) / 4.5 # click via "envelope"
   beat = getBeat()
-  song = [x; beat];
+  song = [x; beat; zeros(44100)];
   global cur = 1
   @async begin
-    while cur < 8*S
+    while cur < 12*S
         amplitude = 0
         if(index!=-1 && curInstrument!=5)
           amplitude = 0.7
@@ -125,9 +137,17 @@ function record()
     
     global canPlay = true;
     global recording = false;
+    print(recordIndex)
     for i in 1:size(recordIndex)[1]
+      if(recordIndex[i, 1] <= 8) 
+        continue
+      end
       x = 0.7 * getNote(recordIndex[i, 3], curInstrument)
-      instrumentRecordings[recordIndex[i, 1]*(2*beatN)+1:recordIndex[i, 1]*(2*beatN)+recordIndex[i, 2], curInstrument] += x[1:recordIndex[i,2]]
+      X = x[1:recordIndex[i,2]]
+      t = (1:length(X)) ./44100
+      env = 1 .- exp.(80*(t.-length(X)/44100))
+      X .*= env
+      instrumentRecordings[(recordIndex[i, 1]-9)*(2*beatN)+1:(recordIndex[i, 1]-9)*(2*beatN)+recordIndex[i, 2], curInstrument] += X
     end
   end
   
@@ -143,30 +163,28 @@ function switchInstrument(i)
 end
 
 function getTracks()
-  names = ("Piano", "Sax", "Flute", "Tuba","Drum")
+  names = ("Tuba", "Sax", "Flute", "Synth","Drum")
   g = GtkGrid() # initialize a grid to hold buttons
-  trackGridStyle = GtkCssProvider(data="#track {background:blue;}")
   set_gtk_property!(g, :row_spacing, 5) # gaps between buttons
   set_gtk_property!(g, :column_spacing, 5)
 
   for i in 1:5 # add the white keys to the grid
     b = GtkButton(names[i]) # make a button for this key
     signal_connect((w) -> switchInstrument(i), b, "clicked")
-    g[2:3, i] = b # put the button in row 2 of the grid
+    g[1:3, i] = b # put the button in row 2 of the grid
   end
 
 
 
-  g2 = GtkGrid()
-  set_gtk_property!(g2, :name, "track")
-  push!(GAccessor.style_context(g2), GtkStyleProvider(trackGridStyle), 600)
-  g[4:10, 2:5] = g2
+  for i in 1:5 # add the white keys to the grid
+    b = GtkButton("clear") # make a button for this key
+    signal_connect((w) -> switchInstrument(i), b, "clicked")
+    g[4:6, i] = b # put the button in row 2 of the grid
+  end
   return g
 
 end
 
-# g_style = GtkCssProvider(data="#wb {background:blue;}")
-# push!(GAccessor.style_context(g), GtkStyleProvider(g_style), 600)
 # set_gtk_property!(g, :name, "wb") # set "style" of undo key
 tracks = getTracks()
 beatmaker = getBeats()

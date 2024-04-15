@@ -3,9 +3,9 @@ using Sound: sound
 using Sound: soundsc
 using WAV
 using MAT: matwrite
-using FFTW: fft
+using FFTW: fft, ifft
 using Plots;
-using DSP: Windows
+using DSP: Windows, resample
 
 (x, S) = wavread("project3.wav"); #soundsc(x, S)
 
@@ -49,4 +49,10 @@ function getNote(idx, j)
   attackSignal = getAttack(idx,j)
   z = [attackSignal; z]
   return z
+end
+
+function upOctave(idx, j)
+  x = instruments[:, j]
+  y = resample(x, S, 2*S)
+  return y
 end

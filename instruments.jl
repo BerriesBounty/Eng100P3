@@ -23,7 +23,7 @@ for j in 1:4
   end
 end
 
-attack = 0.05
+attack = 0.1
 
 
 function getAttack(idx, j)
@@ -46,7 +46,12 @@ function getNote(idx, j)
     index = (1:M) .+ (seg-1)*(M÷2)
     z[index] .+= sustain
   end
+  
   attackSignal = getAttack(idx,j)
+  t = (1:length(attackSignal)) ./44100
+  env = 1 .- exp.(80*(t.-length(attackSignal)/44100))
+  attackSignal .*= env
+  
   z = [attackSignal; z]
   return z
 end

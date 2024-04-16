@@ -87,15 +87,11 @@ using PortAudio
 #------------------------------------------------------------------------------------------
 
 
-# Function to generate and normalize a bass drum sound
-function generate_and_normalize_bass_drum(sample_rate, duration, start_freq, end_freq, amplification_factor)
-  # Time vector
+function bass_drum_func(sample_rate, duration, start_freq, end_freq, amplification_factor)
   t = 0:1/sample_rate:duration
 
-  # Exponential decay in frequency to simulate pitch drop
   freq_decay = exp.(log.(end_freq / start_freq) .* t / duration) .* start_freq
 
-  # Amplitude envelope to simulate the strike decay
   amp_decay = exp.(-10 * t)
   # changed -15 to -10
 
@@ -126,7 +122,7 @@ amplification_factor = 6
 
 
 # Generate and normalize the bass drum sound
-bass_drum_sound = generate_and_normalize_bass_drum(sample_rate, duration, start_freq, end_freq, amplification_factor)
+bass_drum_sound = bass_drum_func(sample_rate, duration, start_freq, end_freq, amplification_factor)
 
 # Save the bass drum sound to a WAV file
 wavwrite(bass_drum_sound, "bass_drum_normalized.wav", Fs=sample_rate)
@@ -282,23 +278,9 @@ crash_cymbal_sound = generate_crash_cymbal(sample_rate, 2.0)
 # Save the crash cymbal sound to a WAV file
 wavwrite(crash_cymbal_sound, "crash_cymbal.wav", Fs=sample_rate)
 
-hihat = hihat[1:11025]
 bass_drum_sound = bass_drum_sound[1:11025]
 snare_sound = snare_sound[1:11025]
 
 wavwrite(bass_drum_sound, "bass_drum_normalized.wav", Fs=sample_rate)
 
-loop = zeros(2 * sample_rate)
-eigthNote = 11025
-print(length(hi_hat_sound))
-for i in 1:8
-  loop[(i-1)*eigthNote+1:i*eigthNote] .+= hihat
-end
-for i in 1:2:8
-  loop[(i-1)*eigthNote+1:i*eigthNote] .+= bass_drum_sound
-end
-for i in 3:4:8
-  loop[(i-1)*eigthNote+1:i*eigthNote] .+= snare_sound
-end
-
-soundsc(loop, sample_rate)
+plot(hi_hat_sound)

@@ -45,7 +45,7 @@ id1 = signal_connect(win, "key-press-event") do widget, event
               global noteStartTime = cur
             else
               duration = cur - noteStartTime 
-              startIndex = round(Int, noteStartTime/(2*beatN))
+              startIndex = round(Int, noteStartTime/(beatN))
               global recordIndex = vcat(recordIndex, [startIndex duration index])
               global noteStartTime = cur
             end
@@ -77,7 +77,7 @@ id2 = signal_connect(win, "key-release-event") do widget, event
   if(keyboardToNote[k] == index)
     if(recording)
       duration = cur - noteStartTime 
-      startIndex = round(Int, noteStartTime/(2*beatN))
+      startIndex = round(Int, noteStartTime/(beatN))
       global recordIndex = vcat(recordIndex, [startIndex duration index])
     end
     global index = -1
@@ -86,15 +86,6 @@ id2 = signal_connect(win, "key-release-event") do widget, event
 end
 
 function play(g::GtkGrid)
-  S = 44100
-  bpm = 60
-  bps = bpm / 60 # beats per second
-  spb = 60 / bpm # seconds per beat
-  t0 = 0.01 # each "tick" is this long
-  tt = 1:1/S:4 # 9 seconds of ticking
-  f = 440
-  #x = 0.9 * cos.(2π*440*tt) .* (mod.(tt, spb) .< t0) # tone
-  x = randn(length(tt)) .* (mod.(tt, spb) .< t0) / 4.5 # click via "envelope"
   canPlay = false;
   song = instrumentRecordings[:,1] + instrumentRecordings[:,2] + instrumentRecordings[:,3] + instrumentRecordings[:,4]
   song = [song; zeros(2*S)]
@@ -139,27 +130,37 @@ function record()
     global recording = false;
     print(recordIndex)
     for i in 1:size(recordIndex)[1]
-      if(recordIndex[i, 1] <= 8) 
+      if(recordIndex[i, 1] <= 16) 
         continue
       end
       x = 0.7 * getNote(recordIndex[i, 3], curInstrument)
       X = x[1:recordIndex[i,2]]
       t = (1:length(X)) ./44100
-      env = 1 .- exp.(80*(t.-length(X)/44100))
+      env = 1 .- exp.(60*(t.-length(X)/44100))
       X .*= env
-      instrumentRecordings[(recordIndex[i, 1]-9)*(2*beatN)+1:(recordIndex[i, 1]-9)*(2*beatN)+recordIndex[i, 2], curInstrument] += X
+      instrumentRecordings[(recordIndex[i, 1]-17)*(beatN)+1:(recordIndex[i, 1]-17)*(beatN)+recordIndex[i, 2], curInstrument] += X
     end
   end
   
 end
 
-function switchInstrument(i)
+function switchInstrument(i, grid)
+  b_color = GtkCssProvider(data="#nocolor {background:none;}")
+  push!(GAccessor.style_context(grid[1, curInstrument]), GtkStyleProvider(b_color), 600)
+  set_gtk_property!(grid[1, curInstrument], :name, "nocolor")
   global curInstrument = i;
+  b_color = GtkCssProvider(data="#bcolor {background:gray;}")
+  push!(GAccessor.style_context(grid[1, i]), GtkStyleProvider(b_color), 600)
+  set_gtk_property!(grid[1, i], :name, "bcolor")
   if(i==5)
     switch_to_grid1()
   else
     switch_to_grid2()
   end
+end
+
+function clearInstrument(i)
+  instrumentRecordings[:, i] .= 0
 end
 
 function getTracks()
@@ -170,7 +171,7 @@ function getTracks()
 
   for i in 1:5 # add the white keys to the grid
     b = GtkButton(names[i]) # make a button for this key
-    signal_connect((w) -> switchInstrument(i), b, "clicked")
+    signal_connect((w) -> switchInstrument(i, g), b, "clicked")
     g[1:3, i] = b # put the button in row 2 of the grid
   end
 
@@ -178,11 +179,18 @@ function getTracks()
 
   for i in 1:5 # add the white keys to the grid
     b = GtkButton("clear") # make a button for this key
-    signal_connect((w) -> switchInstrument(i), b, "clicked")
+    signal_connect((w) -> clearInstrument(i), b, "clicked")
     g[4:6, i] = b # put the button in row 2 of the grid
   end
   return g
 
+end
+
+function download()
+  song = instrumentRecordings[:,1] + instrumentRecordings[:,2] + instrumentRecordings[:,3] + instrumentRecordings[:,4]
+  song = [song; zeros(2*S)]
+  song += getBeat()
+  wavwrite(song, "result.wav", Fs=44100)
 end
 
 # set_gtk_property!(g, :name, "wb") # set "style" of undo key
@@ -199,7 +207,11 @@ topBar[1, 1] = playButton
 recordButton = GtkButton("Record")
 signal_connect((w) -> record(), recordButton, "clicked")
 topBar[2, 1] = recordButton
-g[1,1] = topBar
+
+downloadButton = GtkButton("Download")
+signal_connect((w) -> download(), downloadButton, "clicked")
+topBar[3, 1] = downloadButton
+g[1:3,1] = topBar
 
 
 function switch_to_grid2()

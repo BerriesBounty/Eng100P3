@@ -113,7 +113,7 @@ function switchInstrument(i)
 end
 
 function getTracks()
-  names = ("Piano", "Sax", "Flute", "Tuba","Drum")
+  names = ("Electric Guitar", "Trumpet", "Clarinet", "Tone","Drum")
   g = GtkGrid() # initialize a grid to hold buttons
   trackGridStyle = GtkCssProvider(data="#track {background:blue;}")
   set_gtk_property!(g, :row_spacing, 5) # gaps between buttons
@@ -153,7 +153,7 @@ signal_connect((w) -> record(), recordButton, "clicked")
 topBar[2, 1] = recordButton
 g[1,1] = topBar
 
-keyboard[1,5] = button_switch_to_grid1
+
 
 function switch_to_grid2()
   hide(beatmaker)

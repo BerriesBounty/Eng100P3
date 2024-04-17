@@ -50,4 +50,10 @@ function getKeys()
    return g
 end
 
+b_color = GtkCssProvider(data="#gocolor {background:" * colors[i] * ";}")
+push!(GAccessor.style_context(g[2:3, i]), GtkStyleProvider(b_color), 600)
+set_gtk_property!(g[2:3, i], :name, "gocolor")
+
+colors = ("red", "green", "blue", "purple", "yellow")
+
 

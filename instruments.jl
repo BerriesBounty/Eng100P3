@@ -52,7 +52,9 @@ function getNote(idx, j)
   env = 1 .- exp.(80*(t.-length(attackSignal)/44100))
   attackSignal .*= env
   
-  z = [attackSignal; z]
+  zero = zeros(round(Int,length(attackSignal)/2))
+  z = [zero; z]
+  z[1:length(attackSignal)] .+= attackSignal
   return z
 end
 

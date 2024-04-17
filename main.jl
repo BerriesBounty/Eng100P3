@@ -21,12 +21,15 @@ set_gtk_property!(g, :column_homogeneous, true)
 playNote = false;
 canPlay = true;
 recording = false;
+playSynth = false;
+isOctaveUp = false;
 recordIndex = Array{Int, 2}(undef, 0, 3)
 recordingStartTime = 1
 noteStartTime = 1
 curInstrument = 1
 cur = 1
 index = -1
+lastIndex = -1
 stream = PortAudioStream(0, 1; warn_xruns=false)
 S = 44100
 #keyboard pressing-----------------------
@@ -44,10 +47,14 @@ id1 = signal_connect(win, "key-press-event") do widget, event
             if(index == -1)
               global noteStartTime = cur
             else
-              duration = cur - noteStartTime 
-              startIndex = round(Int, noteStartTime/(beatN))
+              duration = max(round(Int, (cur - noteStartTime )/(beatN)),1) * beatN
+              startIndex = round(Int, noteStartTime/(beatN), RoundDown)
+              if(startIndex == lastIndex)
+                startIndex += 1
+              end
               global recordIndex = vcat(recordIndex, [startIndex duration index])
               global noteStartTime = cur
+              lastIndex = startIndex
             end
           end
           global index = keyboardToNote[k]
@@ -57,6 +64,9 @@ id1 = signal_connect(win, "key-press-event") do widget, event
           if(canPlay)  
             play_tone()
           end
+      end
+      if(Char(k)=="q")
+        global isOctaveUp = true
       end
   else
     # if(index == -1)
@@ -76,12 +86,16 @@ id2 = signal_connect(win, "key-release-event") do widget, event
   #println("You released key ", k, " after time ", duration, " msec.")
   if(keyboardToNote[k] == index)
     if(recording)
-      duration = cur - noteStartTime 
-      startIndex = round(Int, noteStartTime/(beatN))
+      duration = max(round(Int, (cur - noteStartTime )/(beatN)),1) * beatN
+      startIndex = round(Int, noteStartTime/(beatN), RoundDown)
+      
       global recordIndex = vcat(recordIndex, [startIndex duration index])
     end
     global index = -1
     global current = 0
+  end
+  if(Char(k)=="q")
+    global isOctaveUp = false
   end
 end
 
@@ -116,9 +130,8 @@ function record()
         if(index!=-1 && curInstrument!=5)
           amplitude = 0.7
           x = amplitude * getNote(index, curInstrument)
-          if(cur+1 > 4*S)
-            song[cur+1:cur+buf_size] += x[cur+1:cur+buf_size]
-          else
+          
+          if(playSynth)
             song[cur+1:cur+buf_size] += x[cur+1:cur+buf_size]
           end
         end
@@ -193,6 +206,19 @@ function download()
   wavwrite(song, "result.wav", Fs=44100)
 end
 
+function toggleSynth(grid)
+  global playSynth = !playSynth
+  if(playSynth)
+    b_color = GtkCssProvider(data="#synthcolor {background:gray;}")
+    push!(GAccessor.style_context(grid[4, 1]), GtkStyleProvider(b_color), 600)
+    set_gtk_property!(grid[4, 1], :name, "synthcolor")
+  else
+    b_color = GtkCssProvider(data="#synthcolor {background:none;}")
+    push!(GAccessor.style_context(grid[4, 1]), GtkStyleProvider(b_color), 600)
+    set_gtk_property!(grid[4, 1], :name, "synthcolor")
+  end
+end
+
 # set_gtk_property!(g, :name, "wb") # set "style" of undo key
 tracks = getTracks()
 beatmaker = getBeats()
@@ -211,6 +237,10 @@ topBar[2, 1] = recordButton
 downloadButton = GtkButton("Download")
 signal_connect((w) -> download(), downloadButton, "clicked")
 topBar[3, 1] = downloadButton
+
+playSynthButton = GtkButton("Play Synth on Record")
+signal_connect((w) -> toggleSynth(topBar), playSynthButton, "clicked")
+topBar[4:5, 1] = playSynthButton
 g[1:3,1] = topBar
 
 

@@ -21,30 +21,61 @@ set_gtk_property!(g, :column_homogeneous, true)
 playNote = false;
 canPlay = true;
 recording = false;
-curInstrument = 1;
-index = -1;
+playSynth = false;
+isOctaveUp = false;
+recordIndex = Array{Int, 2}(undef, 0, 3)
+recordingStartTime = 1
+noteStartTime = 1
+curInstrument = 1
+cur = 1
+index = -1
+lastIndex = -1
 stream = PortAudioStream(0, 1; warn_xruns=false)
+S = 44100
 #keyboard pressing-----------------------
 keyboardToNote = Dict(Int('a') => 1, Int('w') => 2, Int('s') => 3, Int('e') => 4, Int('d') => 5, Int('f') => 6, Int('t') => 7, Int('g') => 8, Int('y') => 9,
                  Int('h') => 10, Int('j') => 11, Int('i') => 12, Int('k') => 13 ) 
+instrumentRecordings = zeros((Int)(8*S)) * ones(4)'
+
 id1 = signal_connect(win, "key-press-event") do widget, event
   k = event.keyval
   if k ∉ keys(start_times)
       start_times[k] = event.time # save the initial key press time
-      println("You pressed key ", k, " which is '", Char(k), "'.")
+      #println("You pressed key ", k, " which is '", Char(k), "'.")
       if(get(keyboardToNote, k, -1) != -1)
+          if(recording)
+            if(index == -1)
+              global noteStartTime = cur
+            else
+              duration = max(round(Int, (cur - noteStartTime )/(beatN)),1) * beatN
+              startIndex = round(Int, noteStartTime/(beatN), RoundDown)
+              if(startIndex == lastIndex)
+                startIndex += 1
+              end
+              global recordIndex = vcat(recordIndex, [startIndex duration index])
+              global noteStartTime = cur
+              lastIndex = startIndex
+            end
+          end
           global index = keyboardToNote[k]
+          global CurrentNote = getNote(index, curInstrument)
+          global playNote = true
+          
           if(canPlay)  
             play_tone()
           end
       end
-  else
-    if(index == -1)
-      global index = keyboardToNote[k]
-      if(canPlay)  
-        play_tone()
+      if(Char(k)=="q")
+        global isOctaveUp = true
       end
-    end
+  else
+    # if(index == -1)
+    #   global index = keyboardToNote[k]
+    #   global playNote = true
+    #   if(canPlay)  
+    #     play_tone()
+    #   end
+    # end
   end
 end
 
@@ -52,30 +83,37 @@ id2 = signal_connect(win, "key-release-event") do widget, event
   k = event.keyval
   start_time = pop!(start_times, k) # remove the key from the dictionary
   duration = event.time - start_time # key press duration in milliseconds
-  println("You released key ", k, " after time ", duration, " msec.")
+  #println("You released key ", k, " after time ", duration, " msec.")
   if(keyboardToNote[k] == index)
+    if(recording)
+      duration = max(round(Int, (cur - noteStartTime )/(beatN)),1) * beatN
+      startIndex = round(Int, noteStartTime/(beatN), RoundDown)
+      
+      global recordIndex = vcat(recordIndex, [startIndex duration index])
+    end
     global index = -1
     global current = 0
+  end
+  if(Char(k)=="q")
+    global isOctaveUp = false
   end
 end
 
 function play(g::GtkGrid)
-  S = 44100
-  bpm = 120
-  bps = bpm / 60 # beats per second
-  spb = 60 / bpm # seconds per beat
-  t0 = 0.01 # each "tick" is this long
-  tt = 0:1/S:4 # 9 seconds of ticking
-  f = 440
-  #x = 0.9 * cos.(2π*440*tt) .* (mod.(tt, spb) .< t0) # tone
-  x = randn(length(tt)) .* (mod.(tt, spb) .< t0) / 4.5 # click via "envelope"
-  write(stream, x)
+  canPlay = false;
+  song = instrumentRecordings[:,1] + instrumentRecordings[:,2] + instrumentRecordings[:,3] + instrumentRecordings[:,4]
+  song = [song; zeros(2*S)]
+  song += getBeat()
+  write(stream, song)
+  
 end
 
 function record()
+  global recordIndex = Array{Int, 2}(undef, 0, 3)
   global canPlay = false;
+  global recording = true;
   S = 44100
-  bpm = 120
+  bpm = 60
   bps = bpm / 60 # beats per second
   spb = 60 / bpm # seconds per beat
   t0 = 0.01 # each "tick" is this long
@@ -84,27 +122,49 @@ function record()
   #x = 0.9 * cos.(2π*440*tt) .* (mod.(tt, spb) .< t0) # tone
   x = randn(length(tt)) .* (mod.(tt, spb) .< t0) / 4.5 # click via "envelope"
   beat = getBeat()
-  song = [x; beat];
-  cur = 1
+  song = [x; beat; zeros(44100)];
+  global cur = 1
   @async begin
-    while cur < 8*S
+    while cur < 12*S
         amplitude = 0
-        if(index != -1)
+        if(index!=-1 && curInstrument!=5)
           amplitude = 0.7
+          x = amplitude * getNote(index, curInstrument)
+          
+          if(playSynth)
+            song[cur+1:cur+buf_size] += x[cur+1:cur+buf_size]
+          end
         end
-        x = amplitude * getNote(index, curInstrument)
-        global song[cur+1:cur+buf_size] += x[cur+1:cur+buf_size];
         write(stream, song[cur+1:cur+buf_size])
         cur += buf_size
     end
-    write(stream, song)
+    
     global canPlay = true;
-    return song
+    global recording = false;
+    print(recordIndex)
+    for i in 1:size(recordIndex)[1]
+      if(recordIndex[i, 1] <= 16) 
+        continue
+      end
+      x = 0.7 * getNote(recordIndex[i, 3], curInstrument)
+      X = x[1:recordIndex[i,2]]
+      t = (1:length(X)) ./44100
+      env = 1 .- exp.(60*(t.-length(X)/44100))
+      X .*= env
+      instrumentRecordings[(recordIndex[i, 1]-17)*(beatN)+1:(recordIndex[i, 1]-17)*(beatN)+recordIndex[i, 2], curInstrument] += X
+    end
   end
+  
 end
 
-function switchInstrument(i)
+function switchInstrument(i, grid)
+  b_color = GtkCssProvider(data="#nocolor {background:none;}")
+  push!(GAccessor.style_context(grid[1, curInstrument]), GtkStyleProvider(b_color), 600)
+  set_gtk_property!(grid[1, curInstrument], :name, "nocolor")
   global curInstrument = i;
+  b_color = GtkCssProvider(data="#bcolor {background:gray;}")
+  push!(GAccessor.style_context(grid[1, i]), GtkStyleProvider(b_color), 600)
+  set_gtk_property!(grid[1, i], :name, "bcolor")
   if(i==5)
     switch_to_grid1()
   else
@@ -112,31 +172,53 @@ function switchInstrument(i)
   end
 end
 
+function clearInstrument(i)
+  instrumentRecordings[:, i] .= 0
+end
+
 function getTracks()
   names = ("Electric Guitar", "Trumpet", "Clarinet", "Tone","Drum")
   g = GtkGrid() # initialize a grid to hold buttons
-  trackGridStyle = GtkCssProvider(data="#track {background:blue;}")
   set_gtk_property!(g, :row_spacing, 5) # gaps between buttons
   set_gtk_property!(g, :column_spacing, 5)
 
   for i in 1:5 # add the white keys to the grid
     b = GtkButton(names[i]) # make a button for this key
-    signal_connect((w) -> switchInstrument(i), b, "clicked")
-    g[2:3, i] = b # put the button in row 2 of the grid
+    signal_connect((w) -> switchInstrument(i, g), b, "clicked")
+    g[1:3, i] = b # put the button in row 2 of the grid
   end
 
 
 
-  g2 = GtkGrid()
-  set_gtk_property!(g2, :name, "track")
-  push!(GAccessor.style_context(g2), GtkStyleProvider(trackGridStyle), 600)
-  g[4:10, 2:5] = g2
+  for i in 1:5 # add the white keys to the grid
+    b = GtkButton("clear") # make a button for this key
+    signal_connect((w) -> clearInstrument(i), b, "clicked")
+    g[4:6, i] = b # put the button in row 2 of the grid
+  end
   return g
 
 end
 
-# g_style = GtkCssProvider(data="#wb {background:blue;}")
-# push!(GAccessor.style_context(g), GtkStyleProvider(g_style), 600)
+function download()
+  song = instrumentRecordings[:,1] + instrumentRecordings[:,2] + instrumentRecordings[:,3] + instrumentRecordings[:,4]
+  song = [song; zeros(2*S)]
+  song += getBeat()
+  wavwrite(song, "result.wav", Fs=44100)
+end
+
+function toggleSynth(grid)
+  global playSynth = !playSynth
+  if(playSynth)
+    b_color = GtkCssProvider(data="#synthcolor {background:gray;}")
+    push!(GAccessor.style_context(grid[4, 1]), GtkStyleProvider(b_color), 600)
+    set_gtk_property!(grid[4, 1], :name, "synthcolor")
+  else
+    b_color = GtkCssProvider(data="#synthcolor {background:none;}")
+    push!(GAccessor.style_context(grid[4, 1]), GtkStyleProvider(b_color), 600)
+    set_gtk_property!(grid[4, 1], :name, "synthcolor")
+  end
+end
+
 # set_gtk_property!(g, :name, "wb") # set "style" of undo key
 tracks = getTracks()
 beatmaker = getBeats()
@@ -151,7 +233,15 @@ topBar[1, 1] = playButton
 recordButton = GtkButton("Record")
 signal_connect((w) -> record(), recordButton, "clicked")
 topBar[2, 1] = recordButton
-g[1,1] = topBar
+
+downloadButton = GtkButton("Download")
+signal_connect((w) -> download(), downloadButton, "clicked")
+topBar[3, 1] = downloadButton
+
+playSynthButton = GtkButton("Play Synth on Record")
+signal_connect((w) -> toggleSynth(topBar), playSynthButton, "clicked")
+topBar[4:5, 1] = playSynthButton
+g[1:3,1] = topBar
 
 
 

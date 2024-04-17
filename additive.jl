@@ -1,3 +1,5 @@
+#produced synthsizer sound with additive synthesis
+
 using Gtk
 using Sound: sound
 using Sound: soundsc

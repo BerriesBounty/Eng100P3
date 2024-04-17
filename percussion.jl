@@ -12,117 +12,86 @@ using Interpolations
 using SampledSignals
 using PortAudio
 
-#-------------experiments---------------------
-# function exp_freq(t, f_start, f_end, duration)
-#   k = log(f_end / f_start) / duration
-#   return f_start * exp(k * t)
-# end
-
-# # Create a sampled signal
-# function create_exponential_tone(f_start, f_end, duration, sample_rate)
-#   t = 0:1/sample_rate:duration
-#   signal = [cos(2 * π * exp_freq(ti, f_start, f_end, duration) * ti) for ti in t]
-#   return signal
-# end
-
-# # Parameters for the signal
-# f_start = 10000      # start frequency in Hz
-# f_end = 2500        # end frequency in Hz
-# duration = 0.1     # duration of the signal in seconds
-# sample_rate = 44100 # common sample rate for audio in Hz
-
-# # Generate the signal
-# kcutfreq = create_exponential_tone(f_start, f_end, duration, sample_rate)
-# sound(kcutfreq, sample_rate)
-
-# amp = create_exponential_tone(10000, 10, 0.1, sample_rate)
-# sound(amp, sample_rate)
-#-------------experiments---------------------
-
 #create an exponential function 
-function expon(start_val, end_val, dur, t)
-  return start_val * ((end_val / start_val) ^ (t / dur))
-end
+# function expon(start_val, end_val, dur, t)
+#   return start_val * ((end_val / start_val) ^ (t / dur))
+# end
 
-function expon_func(start_val, end_val, dur, sample_rate)
-  return expon.(start_val, end_val, dur, 0:1/sample_rate:dur)
-end
+# function expon_func(start_val, end_val, dur, sample_rate)
+#   return expon.(start_val, end_val, dur, 0:1/sample_rate:dur)
+# end
 
-#create an oscillator 
-function oscil(amp, freq, table_interp, t, sample_rate)
-    # Calculate the index for the table lookup with wrapping for periodicity
-    index = mod1(t * freq, length(table_interp))
-    return amp * table_interp(t * freq * sample_rate)
+# #create an oscillator 
+# function oscil(amp, freq, table_interp, t, sample_rate)
+#     # Calculate the index for the table lookup with wrapping for periodicity
+#     index = mod1(t * freq, length(table_interp))
+#     return amp * table_interp(t * freq * sample_rate)
     
-end
+# end
 
-function oscil_func(amp, table_interp, duration, sample_rate)
-  # Calculate the index for the table lookup with wrapping for periodicity
-  a1 = zeros(Float64, floor(Int, duration * sample_rate))
-  for t in 1:length(a1)
-    time = t / sample_rate
-    k1 = expon(120, 50, 0.2, time)
-    k2 = expon(500, 200, 0.4, time)
-    a1[t] = oscil(amp, k1, table_interp, time, sample_rate)
-    # Process `a1` such as writing to an output buffer
-    # ...
-  end
-  return a1
-end
+# function oscil_func(amp, table_interp, duration, sample_rate)
+#   # Calculate the index for the table lookup with wrapping for periodicity
+#   a1 = zeros(Float64, floor(Int, duration * sample_rate))
+#   for t in 1:length(a1)
+#     time = t / sample_rate
+#     k1 = expon(120, 50, 0.2, time)
+#     k2 = expon(500, 200, 0.4, time)
+#     a1[t] = oscil(amp, k1, table_interp, time, sample_rate)
+#     # Process `a1` such as writing to an output buffer
+#     # ...
+#   end
+#   return a1
+# end
 
 
-duration = 1    # duration of the signal in seconds
-sample_rate = 44100 # common sample rate for audio in Hz
-t = 0:1/sample_rate:duration
+# duration = 1    # duration of the signal in seconds
+# sample_rate = 44100 # common sample rate for audio in Hz
+# t = 0:1/sample_rate:duration
 
-sine_wave_table = sin.(2 * π * (t))  # A simple sine wave table from 0 to 1
-sine_wave_interp = LinearInterpolation(1:length(sine_wave_table), sine_wave_table, extrapolation_bc=Periodic())
+# sine_wave_table = sin.(2 * π * (t))  # A simple sine wave table from 0 to 1
+# sine_wave_interp = LinearInterpolation(1:length(sine_wave_table), sine_wave_table, extrapolation_bc=Periodic())
 
-function interpolate(table_interp, index)
-    # `index` can be a non-integer, and the interpolation scheme will handle it
-    return table_interp(index)
-end
+# function interpolate(table_interp, index)
+#     # `index` can be a non-integer, and the interpolation scheme will handle it
+#     return table_interp(index)
+# end
 
-iamp = 100000
+# iamp = 100000
 
-k1 = expon_func(120, 50, 0.2, sample_rate)
-k2 = expon_func(500, 200, 0.4, sample_rate)
-bass_drum = oscil_func(iamp, sine_wave_interp, 0.25, sample_rate)
+# k1 = expon_func(120, 50, 0.2, sample_rate)
+# k2 = expon_func(500, 200, 0.4, sample_rate)
+# bass_drum = oscil_func(iamp, sine_wave_interp, 0.25, sample_rate)
 
-t = 0:1/sample_rate:0.25
-t = t[1:floor(Int, 0.25*sample_rate)]
-env = (1 .- exp.(-80*t)) .* exp.(-30*t)
-bass_drum = env .* bass_drum
-bass_drum /= maximum(abs.(bass_drum))
-wavwrite(bass_drum, "bass_drum.wav", Fs=sample_rate)
+# t = 0:1/sample_rate:0.25
+# t = t[1:floor(Int, 0.25*sample_rate)]
+# env = (1 .- exp.(-80*t)) .* exp.(-30*t)
+# bass_drum = env .* bass_drum
+# bass_drum /= maximum(abs.(bass_drum))
+# wavwrite(bass_drum, "bass_drum.wav", Fs=sample_rate)
 
-kcutfreq = expon.(10000, 2500, .1, t)
-t = 0:1/sample_rate:duration
-amp = expon.(10000, 20, 0.1, t)
+# kcutfreq = expon.(10000, 2500, .1, t)
+# t = 0:1/sample_rate:duration
+# amp = expon.(10000, 20, 0.1, t)
  
-seed!(0)
-hihat_short = []
- for i in 1:(4410)
-  global hihat_short = [hihat_short; ((rand()*2 - 1) * amp[i])]
-end
-max_amp = maximum(abs.(hihat_short))
-hihat_short = hihat_short / max_amp
-hihat = zeros(floor(Int, 0.25 * sample_rate))
-hihat[1:4410] = hihat_short
-wavwrite(hihat, "hihat.wav", Fs=sample_rate)
+# seed!(0)
+# hihat_short = []
+#  for i in 1:(4410)
+#   global hihat_short = [hihat_short; ((rand()*2 - 1) * amp[i])]
+# end
+# max_amp = maximum(abs.(hihat_short))
+# hihat_short = hihat_short / max_amp
+# hihat = zeros(floor(Int, 0.25 * sample_rate))
+# hihat[1:4410] = hihat_short
+# wavwrite(hihat, "hihat.wav", Fs=sample_rate)
 
 #------------------------------------------------------------------------------------------
 
 
-# Function to generate and normalize a bass drum sound
-function generate_and_normalize_bass_drum(sample_rate, duration, start_freq, end_freq, amplification_factor)
-  # Time vector
+function bass_drum_func(sample_rate, duration, start_freq, end_freq, amplification_factor)
   t = 0:1/sample_rate:duration
 
-  # Exponential decay in frequency to simulate pitch drop
   freq_decay = exp.(log.(end_freq / start_freq) .* t / duration) .* start_freq
 
-  # Amplitude envelope to simulate the strike decay
   amp_decay = exp.(-10 * t)
   # changed -15 to -10
 
@@ -153,7 +122,7 @@ amplification_factor = 6
 
 
 # Generate and normalize the bass drum sound
-bass_drum_sound = generate_and_normalize_bass_drum(sample_rate, duration, start_freq, end_freq, amplification_factor)
+bass_drum_sound = bass_drum_func(sample_rate, duration, start_freq, end_freq, amplification_factor)
 
 # Save the bass drum sound to a WAV file
 wavwrite(bass_drum_sound, "bass_drum_normalized.wav", Fs=sample_rate)
@@ -309,23 +278,9 @@ crash_cymbal_sound = generate_crash_cymbal(sample_rate, 2.0)
 # Save the crash cymbal sound to a WAV file
 wavwrite(crash_cymbal_sound, "crash_cymbal.wav", Fs=sample_rate)
 
-hihat = hihat[1:11025]
 bass_drum_sound = bass_drum_sound[1:11025]
 snare_sound = snare_sound[1:11025]
 
 wavwrite(bass_drum_sound, "bass_drum_normalized.wav", Fs=sample_rate)
 
-loop = zeros(2 * sample_rate)
-eigthNote = 11025
-print(length(hi_hat_sound))
-for i in 1:8
-  loop[(i-1)*eigthNote+1:i*eigthNote] .+= hihat
-end
-for i in 1:2:8
-  loop[(i-1)*eigthNote+1:i*eigthNote] .+= bass_drum_sound
-end
-for i in 3:4:8
-  loop[(i-1)*eigthNote+1:i*eigthNote] .+= snare_sound
-end
-
-soundsc(loop, sample_rate)
+plot(hi_hat_sound)

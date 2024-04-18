@@ -112,6 +112,23 @@ function play(g::GtkGrid)
   
 end
 
+function tremelo(i)
+  x = zeros(4)
+  s = instrumentRecordings[:,i]
+  N = length(song)
+  S = 44100
+  t = N/S
+  lfo = 1 .- 0.4 * cos.(2π*6*t)
+  if (x[i] == 0)
+    instrumentRecordings[:, i] = s*lfo
+    x[i] += 1
+  else
+    x[i] = 0
+    instrumentRecordings[:, i] = s/lfo
+  end
+end
+
+
 function record()
   global recordIndex = Array{Int, 2}(undef, 0, 4)
   global canPlay = false;
@@ -186,7 +203,7 @@ function clearInstrument(i)
 end
 
 function getTracks()
-  names = ("Tuba", "Sax", "Flute", "Synth","Drum")
+  names = ("Electric Guitar", "Trumpet", "Clarinet", "Tone","Drum")
   g = GtkGrid() # initialize a grid to hold buttons
   set_gtk_property!(g, :row_spacing, 5) # gaps between buttons
   set_gtk_property!(g, :column_spacing, 5)
@@ -197,13 +214,18 @@ function getTracks()
     g[1:3, i] = b # put the button in row 2 of the grid
   end
 
-
-
   for i in 1:5 # add the white keys to the grid
     b = GtkButton("clear") # make a button for this key
     signal_connect((w) -> clearInstrument(i), b, "clicked")
     g[4:6, i] = b # put the button in row 2 of the grid
   end
+
+  for i in 1:4 # add the white keys to the grid
+    b = GtkButton("Tremelo") # make a button for this key
+    signal_connect((w) -> tremelo(i), b, "clicked")
+    g[7:9, i] = b # put the button in row 2 of the grid
+  end
+
   return g
 
 end
@@ -251,6 +273,7 @@ playSynthButton = GtkButton("Play Synth on Record")
 signal_connect((w) -> toggleSynth(topBar), playSynthButton, "clicked")
 topBar[4:5, 1] = playSynthButton
 g[1:3,1] = topBar
+
 
 
 function switch_to_grid2()

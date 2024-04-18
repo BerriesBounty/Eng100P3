@@ -7,6 +7,7 @@ using PortAudio: PortAudioStream, write
 using Gtk
 using Plots;
 using Sound: soundsc
+using DSP
 include("BeatMaker.jl")
 include("Keys.jl")
 include("test.jl")
@@ -30,6 +31,7 @@ curInstrument = 1
 cur = 1
 index = -1
 lastIndex = -1
+isTremolo = zeros(4)
 stream = PortAudioStream(0, 1; warn_xruns=false)
 S = 44100
 #keyboard pressing-----------------------
@@ -104,30 +106,47 @@ id2 = signal_connect(win, "key-release-event") do widget, event
 end
 
 function play(g::GtkGrid)
-  canPlay = false;
-  song = instrumentRecordings[:,1] + instrumentRecordings[:,2] + instrumentRecordings[:,3] + instrumentRecordings[:,4]
+  ir = copy(instrumentRecordings)
+  for i in 1:4
+    if(isTremolo[i]==1)
+      ir[:, i] = filterOn(ir[:, i])
+    end
+  end
+  song = ir[:,1] + ir[:,2] + ir[:,3] + ir[:,4]
   song = [song; zeros(2*S)]
   song += getBeat()
   write(stream, song)
   
 end
 
-function tremelo(i)
-  x = zeros(4)
-  s = instrumentRecordings[:,i]
-  N = length(song)
-  S = 44100
-  t = N/S
-  lfo = 1 .- 0.4 * cos.(2π*6*t)
-  if (x[i] == 0)
-    instrumentRecordings[:, i] = s*lfo
-    x[i] += 1
-  else
-    x[i] = 0
-    instrumentRecordings[:, i] = s/lfo
-  end
+function filterOn(i)
+  # s = i
+  # N = length(s)
+  # S = 44100
+  # t = N/S
+  # lfo =  0.5 - 0.4 * cos.(2π*5*t)
+  # s = s.*lfo
+  lpf = digitalfilter(Lowpass(100; fs=44100), Butterworth(2))
+  filtered_signal = filt(lpf, i)
+  max_amp = maximum(abs.(filtered_signal))
+  normalized_signal = filtered_signal / max_amp
+  return normalized_signal
 end
 
+function setFilter(i, grid)
+  
+  if(isTremolo[i]==0)
+    b_color = GtkCssProvider(data="#nocolor {background:gray;}")
+    push!(GAccessor.style_context(grid[7, i]), GtkStyleProvider(b_color), 600)
+    set_gtk_property!(grid[7, i], :name, "nocolor")
+    isTremolo[i] = 1
+  else
+    b_color = GtkCssProvider(data="#nocolor {background:none;}")
+    push!(GAccessor.style_context(grid[7, i]), GtkStyleProvider(b_color), 600)
+    set_gtk_property!(grid[7, i], :name, "nocolor")
+    isTremolo[i] = 0
+  end
+end
 
 function record()
   global recordIndex = Array{Int, 2}(undef, 0, 4)
@@ -143,7 +162,14 @@ function record()
   #x = 0.9 * cos.(2π*440*tt) .* (mod.(tt, spb) .< t0) # tone
   x = randn(length(tt)) .* (mod.(tt, spb) .< t0) / 4.5 # click via "envelope"
   beat = getBeat()
-  song = [x; beat; zeros(44100)];
+  song = [x; beat; zeros(2*S)];
+  ir = copy(instrumentRecordings)
+  for i in 1:4
+    if(isTremolo[i]==1)
+      ir[:, i] = filterOn(ir[:, i])
+    end
+  end
+  song[length(x)+1:length(song)-4*S] += ir[:,1] + ir[:,2] + ir[:,3] + ir[:,4]
   global cur = 1
   @async begin
     while cur < 12*S
@@ -221,8 +247,8 @@ function getTracks()
   end
 
   for i in 1:4 # add the white keys to the grid
-    b = GtkButton("Tremelo") # make a button for this key
-    signal_connect((w) -> tremelo(i), b, "clicked")
+    b = GtkButton("Add Filters") # make a button for this key
+    signal_connect((w) -> setFilter(i, g), b, "clicked")
     g[7:9, i] = b # put the button in row 2 of the grid
   end
 
@@ -231,7 +257,13 @@ function getTracks()
 end
 
 function download()
-  song = instrumentRecordings[:,1] + instrumentRecordings[:,2] + instrumentRecordings[:,3] + instrumentRecordings[:,4]
+  ir = copy(instrumentRecordings)
+  for i in 1:4
+    if(isTremolo[i]==1)
+      ir[:, i] = filterOn(ir[:, i])
+    end
+  end
+  song = ir[:,1] + ir[:,2] + ir[:,3] + ir[:,4]
   song = [song; zeros(2*S)]
   song += getBeat()
   wavwrite(song, "result.wav", Fs=44100)

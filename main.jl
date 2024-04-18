@@ -108,6 +108,23 @@ function play(g::GtkGrid)
   
 end
 
+function tremelo(i)
+  x = zeros(4)
+  s = instrumentRecordings[:,i]
+  N = length(song)
+  S = 44100
+  t = N/S
+  lfo = 1 .- 0.4 * cos.(2π*6*t)
+  if (x[i] == 0)
+    instrumentRecordings[:, i] = s*lfo
+    x[i] += 1
+  else
+    x[i] = 0
+    instrumentRecordings[:, i] = s/lfo
+  end
+end
+
+
 function record()
   global recordIndex = Array{Int, 2}(undef, 0, 3)
   global canPlay = false;
@@ -188,13 +205,18 @@ function getTracks()
     g[1:3, i] = b # put the button in row 2 of the grid
   end
 
-
-
   for i in 1:5 # add the white keys to the grid
     b = GtkButton("clear") # make a button for this key
     signal_connect((w) -> clearInstrument(i), b, "clicked")
     g[4:6, i] = b # put the button in row 2 of the grid
   end
+
+  for i in 1:4 # add the white keys to the grid
+    b = GtkButton("Tremelo") # make a button for this key
+    signal_connect((w) -> tremelo(i), b, "clicked")
+    g[7:9, i] = b # put the button in row 2 of the grid
+  end
+
   return g
 
 end

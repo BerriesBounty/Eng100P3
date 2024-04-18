@@ -72,29 +72,24 @@ function getBeats()
         g[1, i] = name # put the button in row 2 of the grid
     end
 
-    # for i in 1:4
-    #     volume = GtkScale(false, 0:5) # make a button for this key
-    #     g[2, i] = volume # put the button in row 2 of the grid
-    #     GAccessor.value(volume, 3)
-    #     signal_connect(volume, "value-changed") do widget, others...
-    #         value = GAccessor.value(volume)
-    #         amp[i] = value^2
-    #     end
-    # end
+    for i in 1:4
+        volume = GtkScale(false, 0:5) # make a button for this key
+        g[2, i] = volume # put the button in row 2 of the grid
+        GAccessor.value(volume, 3)
+        signal_connect(volume, "value-changed") do widget, others...
+            value = GAccessor.value(volume)
+            amp[i] = value^2
+        end
+    end
     set_gtk_property!(scroll, :child, g)
-    return scroll
 
-# win = GtkWindow("Beat Maker",400, 300)
-# push!(win, g)
-# showall(win)
+    #win = GtkWindow("Beat Maker",400, 300)
+    #push!(win, g)
+    #showall(win)
+    return scroll
 end
 
 function getBeat()
-    cycle = (amp[1]/10)*beat[:,1] + (amp[2]/10)*beat[:,2] + (amp[3]/10)*beat[:,3] + (amp[4]/10)*beat[:,4]
-    song = zeros(10*S)
-    for seg in 1:(2)
-        index = (1:length(cycle)) .+ (seg-1)*((Int)(length(cycle)÷(6/4)))
-        song[index] .+= cycle
-    end
+    song = (amp[1]/10)*beat[:,1] + (amp[2]/10)*beat[:,2] + (amp[3]/10)*beat[:,3] + (amp[4]/10)*beat[:,4]
     return song
 end

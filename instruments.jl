@@ -52,14 +52,11 @@ function getNote(idx, j)
   env = 1 .- exp.(80*(t.-length(attackSignal)/44100))
   attackSignal .*= env
   
-  zero = zeros(round(Int,length(attackSignal)/2))
+  zero = zeros(round(Int,length(attackSignal)/4))
   z = [zero; z]
   z[1:length(attackSignal)] .+= attackSignal
   return z
 end
 
-function upOctave(idx, j)
-  x = instruments[:, j]
-  y = resample(x, S, 2*S)
-  return y
-end
+x = getNote(2, 2)
+plot(x[1:44100], xlabel="samples", ylabel="amplitude", title="sinusoidal signal of an extended note")

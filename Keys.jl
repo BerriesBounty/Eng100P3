@@ -25,7 +25,7 @@ function getKeys()
         g[3+(i-1)*2:4+(i-1)*2, 1:5] = b # put the button in row 2 of the grid
     end
 
-    name = GtkLabel("Use the\nkeyboard\nto play!") # make a button for this key
+    name = GtkLabel("Use the\nkeyboard\nto play! \nq to go \nup octave") # make a button for this key
     g[1, 1:4] = name # put the button in row 2 of the grid
 
     amp = [3.0, 3.0, 3.0, 3.0]

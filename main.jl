@@ -23,7 +23,7 @@ canPlay = true;
 recording = false;
 playSynth = false;
 isOctaveUp = false;
-recordIndex = Array{Int, 2}(undef, 0, 3)
+recordIndex = Array{Int, 2}(undef, 0, 4)
 recordingStartTime = 1
 noteStartTime = 1
 curInstrument = 1
@@ -42,6 +42,10 @@ id1 = signal_connect(win, "key-press-event") do widget, event
   if k ∉ keys(start_times)
       start_times[k] = event.time # save the initial key press time
       #println("You pressed key ", k, " which is '", Char(k), "'.")
+      if(Char(k)=='q')
+        global isOctaveUp = true
+        print(Char(k))
+      end
       if(get(keyboardToNote, k, -1) != -1)
           if(recording)
             if(index == -1)
@@ -52,9 +56,9 @@ id1 = signal_connect(win, "key-press-event") do widget, event
               if(startIndex == lastIndex)
                 startIndex += 1
               end
-              global recordIndex = vcat(recordIndex, [startIndex duration index])
+              global recordIndex = vcat(recordIndex, [startIndex duration index isOctaveUp])
               global noteStartTime = cur
-              lastIndex = startIndex
+              global lastIndex = startIndex
             end
           end
           global index = keyboardToNote[k]
@@ -64,9 +68,6 @@ id1 = signal_connect(win, "key-press-event") do widget, event
           if(canPlay)  
             play_tone()
           end
-      end
-      if(Char(k)=="q")
-        global isOctaveUp = true
       end
   else
     # if(index == -1)
@@ -84,18 +85,21 @@ id2 = signal_connect(win, "key-release-event") do widget, event
   start_time = pop!(start_times, k) # remove the key from the dictionary
   duration = event.time - start_time # key press duration in milliseconds
   #println("You released key ", k, " after time ", duration, " msec.")
-  if(keyboardToNote[k] == index)
+  if(Char(k)=='q')
+    global isOctaveUp = false
+  end
+  if(Char(k)!='q' && keyboardToNote[k] == index)
     if(recording)
       duration = max(round(Int, (cur - noteStartTime )/(beatN)),1) * beatN
       startIndex = round(Int, noteStartTime/(beatN), RoundDown)
-      
-      global recordIndex = vcat(recordIndex, [startIndex duration index])
+      if(startIndex == lastIndex)
+        startIndex += 1
+      end
+      global recordIndex = vcat(recordIndex, [startIndex duration index isOctaveUp])
+      global lastIndex = startIndex
     end
     global index = -1
     global current = 0
-  end
-  if(Char(k)=="q")
-    global isOctaveUp = false
   end
 end
 
@@ -109,7 +113,7 @@ function play(g::GtkGrid)
 end
 
 function record()
-  global recordIndex = Array{Int, 2}(undef, 0, 3)
+  global recordIndex = Array{Int, 2}(undef, 0, 4)
   global canPlay = false;
   global recording = true;
   S = 44100
@@ -130,7 +134,9 @@ function record()
         if(index!=-1 && curInstrument!=5)
           amplitude = 0.7
           x = amplitude * getNote(index, curInstrument)
-          
+          if(isOctaveUp)
+            x = x[1:2:length(x)]
+          end
           if(playSynth)
             song[cur+1:cur+buf_size] += x[cur+1:cur+buf_size]
           end
@@ -147,6 +153,9 @@ function record()
         continue
       end
       x = 0.7 * getNote(recordIndex[i, 3], curInstrument)
+      if(recordIndex[i, 4] != 0)
+        x = x[1:2:length(x)]
+      end
       X = x[1:recordIndex[i,2]]
       t = (1:length(X)) ./44100
       env = 1 .- exp.(60*(t.-length(X)/44100))
@@ -270,6 +279,9 @@ function play_tone()
     while index != -1
       amplitude = 0.7
       x = amplitude * getNote(index, curInstrument)
+      if(isOctaveUp)
+        x = x[1:2:length(x)]
+      end
       write(stream, x[current+1:current+buf_size])
       global current += buf_size
     end

@@ -112,7 +112,7 @@ function play(g::GtkGrid)
       ir[:, i] = filterOn(ir[:, i])
     end
   end
-  song = ir[:,1] + ir[:,2] + ir[:,3] + ir[:,4]
+  song = ir[:,1] .+ ir[:,2] .+ ir[:,3] .+ ir[:,4]
   song = [song; zeros(2*S)]
   song += getBeat()
   write(stream, song)
@@ -169,7 +169,7 @@ function record()
       ir[:, i] = filterOn(ir[:, i])
     end
   end
-  song[length(x)+1:length(song)-4*S] += ir[:,1] + ir[:,2] + ir[:,3] + ir[:,4]
+  song[length(x)+1:length(song)-4*S] .+= ir[:,1] .+ ir[:,2] .+ ir[:,3] .+ ir[:,4]
   global cur = 1
   @async begin
     while cur < 12*S

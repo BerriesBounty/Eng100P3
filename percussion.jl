@@ -85,7 +85,7 @@ using PortAudio
 # wavwrite(hihat, "hihat.wav", Fs=sample_rate)
 
 #------------------------------------------------------------------------------------------
-
+sample_rate = 44100
 
 function bass_drum_func(sample_rate, duration, start_freq, end_freq, amplification_factor)
   t = 0:1/sample_rate:duration
@@ -95,85 +95,53 @@ function bass_drum_func(sample_rate, duration, start_freq, end_freq, amplificati
   amp_decay = exp.(-10 * t)
   # changed -15 to -10
 
-  # Generate the tone with varying frequency
   signal = sin.(2 * π * freq_decay .* t) .* amp_decay
 
   amplified_signal = signal * amplification_factor 
 
-  # Optionally, apply a low-pass filter to smooth the sound
   lpf = digitalfilter(Lowpass(100; fs=sample_rate), Butterworth(2))
   filtered_signal = filt(lpf, amplified_signal)
 
   soft_clipped_signal = tanh.(filtered_signal)
-
-  # Normalize the signal
   max_amp = maximum(abs.(soft_clipped_signal))
   normalized_signal = soft_clipped_signal / max_amp
 
   return normalized_signal
 end
 
-sample_rate = 44100
 duration = 0.25
 start_freq = 150
 end_freq = 60
-amplification_factor = 6
-
-
-
-# Generate and normalize the bass drum sound
-bass_drum_sound = bass_drum_func(sample_rate, duration, start_freq, end_freq, amplification_factor)
-
-# Save the bass drum sound to a WAV file
+bass_drum_sound = bass_drum_func(sample_rate, 0.25, start_freq, end_freq, 6)
 wavwrite(bass_drum_sound, "bass_drum_normalized.wav", Fs=sample_rate)
-
-# If you want to play the sound directly (ensure your environment supports it)
-# soundsc(bass_drum_sound, sample_rate)
 #BASS DRUM SIGNAL
 
 
 
-# Function to generate a hi-hat sound
-function generate_hi_hat(sample_rate, duration)
-  # Create time vector
+function hi_hat_func(sample_rate, duration)
   t = 0:1/sample_rate:duration
-  
-  # Generate white noise
+
   noise = randn(Float64, length(t))
+  env = exp.(-50 * t)
   
-  # Create an amplitude envelope with exponential decay
-  envelope = exp.(-50 * t)
-  
-  # Apply the envelope to the white noise
-  hi_hat_sound = noise .* envelope
-  
-  # Optionally, apply a high-pass filter to give a brighter cymbal sound
+  hi_hat_sound = noise .* env
+
   hpf = digitalfilter(Highpass(10000; fs=sample_rate), Butterworth(4))
   filtered_hi_hat_sound = filt(hpf, hi_hat_sound)
+
+  filtered_hi_hat_sound /= maximum(abs.(filtered_hi_hat_sound))
   
   return filtered_hi_hat_sound
 end
 
-# Generate the hi-hat sound
-hi_hat_sound = generate_hi_hat(sample_rate, duration)
-
-# Normalize the hi-hat sound to prevent clipping
-hi_hat_sound /= maximum(abs.(hi_hat_sound))
-
-# Save the hi-hat sound to a WAV file
+hi_hat_sound = hi_hat_func(sample_rate, duration)
 wavwrite(hi_hat_sound, "hi_hat.wav", Fs=sample_rate)
 
-# If you want to play the sound directly (ensure your environment supports it)
-# soundsc(hi_hat_sound, sample_rate)
-
 # snare code
-
-# Define the exponential decay function
 function expon(start_val, end_val, dur, t)
   return start_val * ((end_val / start_val) ^ (t / dur))
 end
 
-# Create a function for generating noise with an exponential amplitude envelope
 function generate_noise_with_envelope(start_amp, end_amp, duration, sample_rate)
   t = 0:1/sample_rate:duration
   envelope = expon.(start_amp, end_amp, duration, t)
@@ -183,20 +151,20 @@ end
 
 # Create a function for generating a snare drum sound
 function snareDrum(sample_rate=44100, duration=0.25)
-  # Noise component
-  noise_amp_start = 1.0
-  noise_amp_end = 0.01
-  noise_component = generate_noise_with_envelope(noise_amp_start, noise_amp_end, duration, sample_rate)
-  
-  # Tonal component
-  tone_freq = 250 # Frequency in Hz for the tonal component
+  # Noise
   t = 0:1/sample_rate:duration
+  envelope = expon.(1.0, 0.01, duration, t)
+  noise = randn(length(t))
+  noise_component = noise .* envelope
+  
+  # Tone
+  tone_freq = 250
   tone = sin.(2 * π * tone_freq * t)
   tone_envelope = expon.(1.0, 0.01, duration, t)
-  tone_component = tone .* tone_envelope
 
-  # Combine tone and noise
-  snare_sound = noise_component + tone_component
+  tone = tone .* tone_envelope
+
+  snare_sound = noise_component + tone
 
   return snare_sound
 end

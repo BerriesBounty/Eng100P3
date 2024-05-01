@@ -251,4 +251,4 @@ snare_sound = snare_sound[1:11025]
 
 wavwrite(bass_drum_sound, "bass_drum_normalized.wav", Fs=sample_rate)
 
-plot(hi_hat_sound)
+plot(bass_drum_sound, xlabel="Sample", ylabel="Amplitude", title="Bass Drum Signal")

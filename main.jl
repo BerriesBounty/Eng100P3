@@ -342,3 +342,7 @@ function play_tone()
     end
   end 
 end
+
+x = getNote(1,1);
+y = filterOn(x)
+plot(y[1:44100], xlabel="samples", ylabel="amplitude", title="Filtered Signal")
